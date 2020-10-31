@@ -349,7 +349,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 int main(int argc, char *argv[])
 {
     // mtrace();
-    cakelog_initialise("merkle_tree",false);
+    cakelog_initialise(argv[0],false);
 
     char * words = read_dictionary_file("./test_data/ukenglish.txt");
     long word_count = get_word_count(words);
