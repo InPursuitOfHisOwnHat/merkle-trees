@@ -2,7 +2,8 @@ import hashlib
 
 class Node:
 
-    def __init__(self, left_node=None, right_node=None, data=None, hashed_data=None):
+    def __init__(self, left_node=None, right_node=None, data=None, 
+                                                        hashed_data=None):
         self.left = left_node
         self.right = right_node
         self.data = data
@@ -23,7 +24,9 @@ def build_tree(nodes):
     while(left_index < len(nodes)):
         right_index = left_index + 1
         if right_index < len(nodes):
-            node_layer.append(Node(nodes[left_index], nodes[right_index], nodes[left_index].data + nodes[right_index].data, hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8') + nodes[right_index].hashed_data.hexdigest().encode('utf-8'))))
+            node_layer.append(Node(nodes[left_index], nodes[right_index], 
+                            nodes[left_index].data + nodes[right_index].data, 
+            hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8') + nodes[right_index].hashed_data.hexdigest().encode('utf-8'))))
         else:
             node_layer.append(Node(nodes[left_index], None, nodes[left_index].data, hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8'))))
         left_index = right_index + 1
@@ -36,10 +39,11 @@ def build_tree(nodes):
         return build_tree(node_layer)
 
 
+if __name__ == '__main__':
 
-data =['In', 'Pursuit', 'Of', 'His', 'Own', 'Hat']
-leaves = []
-for item in data:
-    leaves.append(Node(left_node=None, right_node=None, data=item, hashed_data=hashlib.sha256(item.encode('utf-8'))))
-root = build_tree(leaves)
+    data =['In', 'Pursuit', 'Of', 'His', 'Own', 'Hat']
+    leaves = []
+    for item in data:
+        leaves.append(Node(left_node=None, right_node=None, data=item, hashed_data=hashlib.sha256(item.encode('utf-8'))))
+    root = build_tree(leaves)
 

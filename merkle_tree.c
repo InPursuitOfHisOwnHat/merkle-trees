@@ -11,22 +11,13 @@
 #include <openssl/evp.h>
 #include <stdbool.h>
 #include<mcheck.h>
-
-
 #include "../cakelog/cakelog.h"
 
-/* This function will return a pointer to a block of memory that consists of
-all text in the dictionary file.*/
 char* read_dictionary_file(const char* dict_file) {
 
     cakelog("===== read_dictionary() =====");
     cakelog("dictionary file: %s", dict_file);
 
-    /* Let's use some syscalls for this stuff because I'm on Linux and
-    feeling awkward. Obviously, if you're doing this on another platform you can
-    use functions in the stdio.h library */
-
-    /* Open the dictionary file */
     const int dictionary_fd = open(dict_file, O_RDONLY);
     if (dictionary_fd == -1) {
         perror("open()");
@@ -36,8 +27,6 @@ char* read_dictionary_file(const char* dict_file) {
 
     cakelog("dictionary file opened with fd %d", dictionary_fd);
 
-    /* Get the size of the file using fstat() so we can work out how big our 
-    text buffer should be. We're going to read the whole lot into memory at once */
     struct stat dict_stats;
 
     if (fstat(dictionary_fd, &dict_stats) == -1) {
@@ -46,22 +35,16 @@ char* read_dictionary_file(const char* dict_file) {
         exit(EXIT_FAILURE);
     }
 
-    /* Total size in bytes can be found in the st_size variable of the stat
-     (https://man7.org/linux/man-pages/man2/stat.2.html) */
     const long file_size = dict_stats.st_size;
 
     cakelog("retrieved file_size of %ld bytes", file_size);
 
-    /* We got the size of our buffer, but we will need space to add a terminating \0
-    because the raw file text wont' have one */
     const long buffer_size = file_size + 1;
 
-    /* Now allocate memory for our buffer */
     char* buffer = malloc(buffer_size);
 
     cakelog("initialised buffer size of %ld bytes (extra one for 0 (NULL terminator))", buffer_size);
  
-    /* Now use the read() to load all the data in at once, no messing. */
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
         cakelog("unable to load file data into buffer");
@@ -71,11 +54,8 @@ char* read_dictionary_file(const char* dict_file) {
 
     cakelog("loaded %ld bytes into buffer", bytes_read);
 
-    /* Good Housekeeping! */
     close(dictionary_fd);
 
-    /* Finally, add the terminating \0 and we now have a large char block that
-    consists of all the data in the file */
     buffer[file_size] = '\0';
 
     cakelog("added 0 (NULL terminator) to buffer position %ld", buffer_size);
@@ -87,8 +67,11 @@ char* read_dictionary_file(const char* dict_file) {
 
 long get_word_count(const char* data) {
 
-    /* We know the data is made of of words, one on each line so we're just going to
-    count the newlines ('\n') in the data */
+    /* 
+    We know the data is made of of words, one on each line so we're just going to
+    count newlines ('\n') in the data but add one for the last word which will
+    have '\0' at the end, not '\n') 
+    */
 
     cakelog("===== get_word_count() =====");
 
@@ -98,7 +81,7 @@ long get_word_count(const char* data) {
              word_count++;
          }
      }
-     /* Add an extra one for the last word of the file (no newline postfix) */
+
      word_count++;
 
      cakelog("returning word count of %ld", word_count);
@@ -107,19 +90,26 @@ long get_word_count(const char* data) {
 }
 
 char * hexdigest(const unsigned char* hash) {
-    // Return a 64 character string representation of the hash.
 
     cakelog("===== hexdigest() =====");
 
+    /* 
+    The SHA256 digest is stored in a 32 byte block pointed to by an unsigned char *. 
+    We want to each byte converted to its hex value, two alphanumeric characters per byte.
+    This means we need a 64 character buffer available, plus an extra one
+    for the '\0'.
+
+    We move along the SHA256 digest one byte at a time, converting it to two alphanumeric
+    characters and storing the result in the final char *. We then have to move to
+    the next available slot in the string which is the one after the next because,
+    remember, each byte of the digest takes up two characters.
+    */
+
     char * hexdigest = calloc(1,65);
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        // We're converting to Hex which takes up two digits per byte
-        // Sha256 produces a 32 byte value
-        // so when converting to string we need to add 2
-        // Sha Digest Length is 32 bytes but when you represent each byte as a hexadecimal character in a string
-        // you need two digits, so that means we need to shift along an extra one when loading up the array.
+
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
 		sprintf(hexdigest + (i * 2), "%02x", hash[i]);
-    }
+
     hexdigest[64]='\0';
     cakelog("returning %s", hexdigest);
     return hexdigest;
@@ -128,9 +118,11 @@ char * hexdigest(const unsigned char* hash) {
 
 unsigned char * sha256(const char * data) {
 
-    // Use openssl library to get a SHA256 hash of `data`. This is returned
-    // as binary values in an unsigned char * so we will need a conversion
-    // function to actually see the 64 character hash digest itself.
+    /*
+    Use openssl library to get a SHA256 hash digest of `data`. This is returned
+    as 32 byte block pointed to by an unsigned char * so we will need a conversion
+    function to actually see the 64 character hash digest itself.
+    */
 
     cakelog("===== sha256() =====");
 
@@ -142,7 +134,10 @@ unsigned char * sha256(const char * data) {
     cakelog("initialising new mdctx");
     mdctx = EVP_MD_CTX_new();
     
-    // All these functions return 1 for success and 0 for error ... well, it's a free country.
+    /* 
+    All these functions return 1 for success and 0 for error ... well, it's 
+    a free country. */
+
     EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
     cakelog("updating mdctx digest with data [%s]", data);
     EVP_DigestUpdate(mdctx, data, data_len);
@@ -158,6 +153,12 @@ unsigned char * sha256(const char * data) {
 
 }
 
+/*
+A fairly basic, fairly standard tree node. Note that we include space for the
+actual data, something that would raise a few eyebrows with cryptography experts,
+...to put it mildly.
+*/
+
 struct Node {
     struct Node * left;
     struct Node * right;
@@ -165,9 +166,11 @@ struct Node {
     char * data;
 }; typedef struct Node Node;
 
+/*
+A c-style 'constructor' for Nodes
+*/
 Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
 
-    // Helper function n to construct nodes
     cakelog("===== new_node() =====");
     cakelog("left: %p, right: %p, data: [%s], hash: [%s]", left, right, data, sha256_digest);
 
@@ -182,9 +185,15 @@ Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
     return node;
 }
 
+
 Node ** build_leaves(char* data) {
 
     cakelog("===== build_leaves() =====");
+
+    /*
+    We just need to allocate enough memory to store pointers to all the tree
+    nodes
+    */
 
     long word_count = get_word_count(data);
 
@@ -233,7 +242,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     cakelog("len is greater than 1");
 
     // We know how many nodes are in this layer because it's passed in, so just declare
-    // a big fat array.
+    // a big fat block of memory.
     // Node * node_layer[len];
     // cakelog("created array with space for %ld node pointers in node_layer at address %p", len, node_layer);
 
