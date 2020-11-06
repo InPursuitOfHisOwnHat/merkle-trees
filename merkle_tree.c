@@ -10,8 +10,9 @@
 #include <openssl/sha.h>
 #include <openssl/evp.h>
 #include <stdbool.h>
-#include<mcheck.h>
-#include "../cakelog/hatlog.h"
+#include <mcheck.h>
+#include "./hatlog/hatlog.h"
+
 
 char* read_dictionary_file(const char* dict_file) {
 
@@ -26,6 +27,7 @@ char* read_dictionary_file(const char* dict_file) {
         hatlog("failed to open dictionary file");
         exit(EXIT_FAILURE);
     }
+    
     hatlog("dictionary file opened with fd %d", dictionary_fd);
 
     /*  
@@ -384,7 +386,7 @@ void print_command_line( char* program_name ) {
 int main(int argc, char *argv[])
 {
     /* Just do some args checking */
-    
+
     if (argc == 3) {
         if (strcmp(argv[2], "-d") == 0) {
             hatlog_initialise(argv[0],false);
