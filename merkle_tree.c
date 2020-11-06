@@ -87,9 +87,7 @@ char* read_dictionary_file(const char* dict_file) {
     
     buffer[file_size] = '\0';
 
-    cakelog("added 0 (NULL terminator) to buffer position %ld", file_size);
-
-    cakelog("returning buffer of %ld bytes", buffer_size);
+    cakelog("added 0 (NULL terminator) to buffer position %ld, returning buffer of %ld bytes", file_size);
 
     return buffer;
 }
