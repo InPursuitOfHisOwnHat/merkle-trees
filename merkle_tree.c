@@ -388,12 +388,20 @@ int main(int argc, char *argv[])
     /* Just do some args checking */
 
     if (argc == 3) {
+    
+        /* Debug with no flush */
+        
         if (strcmp(argv[2], "-d") == 0) {
             hatlog_initialise(argv[0],false);
         }
+        
+        /* Debug with flush */
+        
         else if (strcmp(argv[2], "-df") == 0) {
             hatlog_initialise(argv[0],true);
         }
+        
+        /* Not a valid debug option */
         else {
             print_command_line(argv[0]);
             exit(EXIT_FAILURE);
