@@ -80,24 +80,26 @@ char* read_dictionary_file(const char* dict_file) {
     cakelog("loaded %ld bytes into buffer", bytes_read);
 
     /* Good housekeeping! */
-    
+
     close(dictionary_fd);
 
     /* Add the NULL terminator to the buffer */
-    
+
     buffer[file_size] = '\0';
 
     cakelog("added 0 (NULL terminator) to buffer position %ld, returning buffer of %ld bytes", file_size);
 
     return buffer;
-}
+    
+    }
 
 long get_word_count(const char* data) {
 
     /* 
-    We know the data is made of of words, one on each line so we're just going to
-    count newlines ('\n') in the data but add one for the last word which will
-    have '\0' at the end, not '\n') 
+     *  We know the data is made of words, one on each line, so all we really need
+     *  to do is count the number of newlines ('\n') to get the number of words and
+     *  remember to add one for the last word which will terminate with '\0' 
+     *  (end of the buffer), not '\n').
     */
 
     cakelog("===== get_word_count() =====");
@@ -121,15 +123,15 @@ char * hexdigest(const unsigned char* hash) {
     cakelog("===== hexdigest() =====");
 
     /* 
-    The SHA256 digest is stored in a 32 byte block pointed to by an unsigned char *. 
-    We want to each byte converted to its hex value, two alphanumeric characters per byte.
-    This means we need a 64 character buffer available, plus an extra one
-    for the '\0'.
+    *   The SHA256 digest is stored in a 32 byte block pointed to by an unsigned char *. 
+    *   We want to each byte converted to its hex value, two alphanumeric characters per byte.
+    *   This means we need a 64 character buffer available, plus an extra one
+    *   for the '\0'.
 
-    We move along the SHA256 digest one byte at a time, converting it to two alphanumeric
-    characters and storing the result in the final char *. We then have to move to
-    the next available slot in the string which is the one after the next because,
-    remember, each byte of the digest takes up two characters.
+    *   We move along the SHA256 digest one byte at a time, converting it to two alphanumeric
+    *   characters and storing the result in the final char *. We then have to move to
+    *   the next available slot in the string which is the one after the next because,
+    *   remember, each byte of the digest takes up two characters.
     */
 
     char * hexdigest = calloc(1,65);
