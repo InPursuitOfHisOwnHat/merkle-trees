@@ -15,7 +15,6 @@ class Node:
 
 
 def build_tree(nodes):
-
     
     if len(nodes) == 1:
         return nodes
@@ -38,7 +37,7 @@ def build_tree(nodes):
             n = Node(nodes[left_index],
                      None, 
                      nodes[left_index].data, 
-                     hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8')))
+                     hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8') + nodes[left_index].hashed_data.hexdigest().encode('utf-8')))
 
         node_layer.append(n)
         left_index = right_index + 1

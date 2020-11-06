@@ -305,7 +305,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", nodes[left_index], nodes[left_index]->data, nodes[right_index], nodes[right_index]->data);
             
-            char* data = malloc(sizeof(char) * data_len + 1);
+            char* data = malloc(sizeof(char) * data_len);
 
             hatlog("allocated %ld bytes for new node data at %p", data_len + 1, data);
 
@@ -346,23 +346,25 @@ Node * build_merkle_tree(Node ** nodes, long len) {
             // We only have a left leaf left (say that after eight pints)
             hatlog("we only have left node");
             hatlog("left node data: [%p]", nodes[left_index]);
-            int data_len = strlen(nodes[left_index]->data) + 1;
+            int data_len = (strlen(nodes[left_index]->data) * 2) + 1;
 
             hatlog("length of new data: %ld", data_len);
 
             hatlog("left node addr: %p, left node data: [%s]", nodes[left_index], nodes[left_index]->data);
 
-            char * data = malloc(sizeof(char) * data_len + 1);
-            hatlog("allocated %ld bytes for new node data at %p", data_len + 1, data);
+            char * data = malloc(sizeof(char) * data_len);
+            hatlog("allocated %ld bytes for new node data at %p", data_len, data);
 
-            char * digest = malloc(sizeof(char) * 65);
+            char * digest = malloc(sizeof(char) * 129);
             hatlog("allocated %ld bytes for new node digest at %p", 65, digest);
 
             strcpy(data, nodes[left_index]->data);
+            strcat(data, nodes[left_index]->data);
             hatlog("new node data is: %s", data);
             hatlog("new node data len is: %ld", strlen(data));
 
             strcpy(digest, nodes[left_index]->sha256_digest);
+            strcat(digest, nodes[left_index]->sha256_digest);
             hatlog("new node digest is: %s", digest);
 
             Node * n = new_node(nodes[left_index], NULL, data, hexdigest(sha256(digest)));
