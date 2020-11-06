@@ -63,3 +63,4 @@ if __name__ == '__main__':
     # Build our tree
     root = build_tree(leaves)
 
+    print("Root Has Digest: {0}".format(root.hashed_data.hexdigest()))
