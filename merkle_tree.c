@@ -18,15 +18,24 @@ char* read_dictionary_file(const char* dict_file) {
     cakelog("===== read_dictionary() =====");
     cakelog("dictionary file: %s", dict_file);
 
+    /* Get a file descriptor for the dictionary file */
+
     const int dictionary_fd = open(dict_file, O_RDONLY);
     if (dictionary_fd == -1) {
         perror("open()");
         cakelog("failed to open dictionary file");
         exit(EXIT_FAILURE);
     }
-
     cakelog("dictionary file opened with fd %d", dictionary_fd);
 
+    /*  
+     *  The stat struct is a system struct that can be loaded with various
+     *  statistics about a file using the fstat() system call. 
+     * 
+     *  We're using it here so we can get the file size in bytes.
+     *
+     */
+    
     struct stat dict_stats;
 
     if (fstat(dictionary_fd, &dict_stats) == -1) {
@@ -39,12 +48,28 @@ char* read_dictionary_file(const char* dict_file) {
 
     cakelog("retrieved file_size of %ld bytes", file_size);
 
-    const long buffer_size = file_size + 1;
+    /*  
+     *  Now we have the file size we can allocate a block of memory
+     *  big enough for us to load the entire file in plus one extra
+     *  byte for the '\0' (NULL terminator).
+     *
+     */
 
+    const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
 
     cakelog("initialised buffer size of %ld bytes (extra one for 0 (NULL terminator))", buffer_size);
- 
+
+    /*
+     *  Now read the whole file in. We know it will fit
+     *  comfortably, so just pass file_size retrieved above into 
+     *  the read() system call which tells is to grab the lot.
+     *
+     *  We also check that the total amount read in (returned by read()
+     *  matches the file size. This confirms we got it all.
+     *
+     */
+     
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
         cakelog("unable to load file data into buffer");
@@ -54,13 +79,17 @@ char* read_dictionary_file(const char* dict_file) {
 
     cakelog("loaded %ld bytes into buffer", bytes_read);
 
+    /* Good housekeeping! */
+    
     close(dictionary_fd);
 
+    /* Add the NULL terminator to the buffer */
+    
     buffer[file_size] = '\0';
 
-    cakelog("added 0 (NULL terminator) to buffer position %ld", buffer_size);
+    cakelog("added 0 (NULL terminator) to buffer position %ld", file_size);
 
-    cakelog("returning buffer");
+    cakelog("returning buffer of %ld bytes", buffer_size);
 
     return buffer;
 }
