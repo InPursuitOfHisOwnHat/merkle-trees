@@ -401,7 +401,8 @@ int main(int argc, char *argv[])
             hatlog_initialise(argv[0],true);
         }
         
-        /* Not a valid debug option */
+        /* No valid debug option */
+        
         else {
             print_command_line(argv[0]);
             exit(EXIT_FAILURE);
