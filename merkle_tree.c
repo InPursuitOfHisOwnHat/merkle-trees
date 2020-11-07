@@ -224,27 +224,24 @@ Node ** build_leaves(char* data) {
     hatlog("===== build_leaves() =====");
 
     /*
-    We just need to allocate enough memory to store pointers to all the tree
-    nodes
+    *   We just need to allocate enough memory to store pointers to all the leaf nodes. 
+    *   We know how many leaves there will be once we call get_word_count()
     */
-
     long word_count = get_word_count(data);
-
-    hatlog("building %ld leaves (pointers) from buffer", word_count);
-
     Node ** leaves = malloc(sizeof(Node *)*word_count);
 
-    hatlog("allocated array of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char *) + 1);
+    hatlog("allocated block of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char *) + 1);
 
     long index = 0;
     long hash_count = 0;
+    Node * n;
 
     hatlog("beginning loop through buffer using strtok");
 
     char * word = strtok(data, "\n\0");
     while( word != NULL) {
         hatlog("next word is [%s]", word);
-        Node * n = new_node(NULL, NULL, word, hexdigest(sha256(word)));
+        n = new_node(NULL, NULL, word, hexdigest(sha256(word)));
         leaves[index] = n;
         hash_count++;
         index++;
@@ -286,6 +283,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     int node_layer_index = 0;
     long left_index = 0;
     long right_index = 0;
+    Node * n;
 
     hatlog("entering main loop");
 
@@ -317,12 +315,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
             // is experimental and I want to do some checks at the end to prove
             // that its working. Clearly you wouldn't do this if you were
             // building a real Merkle Tree. One of the major advantages is that
-            // is that it obsfuscates data and doesn't stick it right next to 
-            // the hash like it was written by an idiot.
-            strcpy(data, nodes[left_index]->data);
-            strcat(data, nodes[right_index]->data);
-
-            hatlog("new node data is: %s", data);
+            // is that it obsfuscates data and doesn't stileft_index
             hatlog("new node data len is: %ld", strlen(data));
 
             // We're going to store the digest as a hex string because I want to
@@ -334,13 +327,12 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("new node digest is: %s", digest);
 
-            Node * n = new_node(nodes[left_index], nodes[right_index], data, hexdigest(sha256(digest)));
+            n = new_node(nodes[left_index], nodes[right_index], data, hexdigest(sha256(digest)));
 
-            node_layer[node_layer_index] = n;
+            
 
             hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
 
-            node_layer_index++;
         }
         else {
             // We only have a left leaf left (say that after eight pints)
@@ -367,12 +359,13 @@ Node * build_merkle_tree(Node ** nodes, long len) {
             strcat(digest, nodes[left_index]->sha256_digest);
             hatlog("new node digest is: %s", digest);
 
-            Node * n = new_node(nodes[left_index], NULL, data, hexdigest(sha256(digest)));
-            node_layer[node_layer_index] = n;
+            n = new_node(nodes[left_index], NULL, data, hexdigest(sha256(digest)));
 
             hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
-            node_layer_index++;
+            
         }
+        node_layer[node_layer_index] = n;
+        node_layer_index++;
         left_index = right_index + 1;
     }
 
