@@ -261,7 +261,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
     hatlog("passed in node ** with address of %p and len of %ld", nodes, len);
 
-    // We already have the root
+    /* We already have the root, just send back */
     if (len == 1) {
 
         hatlog("len is 1 so that means we already have the root. Returning nodes[0] at address %p", nodes[0]);
@@ -276,14 +276,32 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     // Node * node_layer[len];
     // hatlog("created array with space for %ld node pointers in node_layer at address %p", len, node_layer);
 
-    Node ** node_layer = malloc(sizeof(Node *)*len);
+    /*
+    *   A bit fudgy.
+    *   We know how many nodes have been passed in (the current layer) so we can work out how many
+    *   There will be in this layer. If is can be split into two evenly then no problem, just set the
+    *   size of the array to half the len. If it's odd then we need to add one after splitting in 
+    *   two
+    */
+   
+    long node_layer_size = 0;
+    if (len % 2 == 0) {
+        node_layer_size = len/2;
+    }
+    else {
+        node_layer_size = (len/2)+1;
+    }
+    Node ** node_layer = malloc(sizeof(Node *)*node_layer_size);
 
-    hatlog("allocated space for %ld node pointers in node_layer at address %p", len, node_layer);
+    hatlog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
 
     int node_layer_index = 0;
     long left_index = 0;
     long right_index = 0;
-    Node * n;
+
+    Node* n;
+    char* data;
+    char* digest;
 
     hatlog("entering main loop");
 
@@ -297,31 +315,30 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         
         if (right_index < len) {
 
-            hatlog("we have both left node and right node");
+            hatlog("both left node and right node");
 
             int data_len = strlen(nodes[left_index]->data) + strlen(nodes[right_index]->data) + 1;
 
-            hatlog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", nodes[left_index], nodes[left_index]->data, nodes[right_index], nodes[right_index]->data);
+            hatlog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", 
+                                            nodes[left_index], 
+                                            nodes[left_index]->data, 
+                                            nodes[right_index], 
+                                            nodes[right_index]->data);
             
-            char* data = malloc(sizeof(char) * data_len);
+            data = malloc(sizeof(char) * data_len);
 
-            hatlog("allocated %ld bytes for new node data at %p", data_len + 1, data);
+            hatlog("allocated %ld bytes for new node data at %p", data_len, data);
 
-            char* digest = malloc(sizeof(char) * 129);
+            digest = malloc(sizeof(char) * 129);
 
             hatlog("allocated 129 bytes for digest");
 
-            // Store the actual data in the tree. Only doing this because this
-            // is experimental and I want to do some checks at the end to prove
-            // that its working. Clearly you wouldn't do this if you were
-            // building a real Merkle Tree. One of the major advantages is that
-            // is that it obsfuscates data and doesn't stileft_index
+            strcpy(data, nodes[left_index]->data);
+            strcat(data, nodes[right_index]->data);
+
+            hatlog("new node data is: %s", data);
             hatlog("new node data len is: %ld", strlen(data));
 
-            // We're going to store the digest as a hex string because I want to
-            // do some rudimentary checking. We could probably just store
-            // the unsigned char * binary version that openssl returns, though,
-            // and only pull out the hex string right at the end for the root.
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[right_index]->sha256_digest);
 
@@ -329,48 +346,46 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             n = new_node(nodes[left_index], nodes[right_index], data, hexdigest(sha256(digest)));
 
-            
-
-            hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
-
         }
         else {
             // We only have a left leaf left (say that after eight pints)
-            hatlog("we only have left node");
-            hatlog("left node data: [%p]", nodes[left_index]);
+            hatlog("only have left node available");
+            
             int data_len = (strlen(nodes[left_index]->data) * 2) + 1;
-
-            hatlog("length of new data: %ld", data_len);
 
             hatlog("left node addr: %p, left node data: [%s]", nodes[left_index], nodes[left_index]->data);
 
-            char * data = malloc(sizeof(char) * data_len);
+            data = malloc(sizeof(char) * data_len);
+
             hatlog("allocated %ld bytes for new node data at %p", data_len, data);
 
-            char * digest = malloc(sizeof(char) * 129);
-            hatlog("allocated %ld bytes for new node digest at %p", 65, digest);
+            digest = malloc(sizeof(char) * 129);
+            hatlog("allocated 129 bytes for digest");
 
             strcpy(data, nodes[left_index]->data);
             strcat(data, nodes[left_index]->data);
+
             hatlog("new node data is: %s", data);
             hatlog("new node data len is: %ld", strlen(data));
 
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[left_index]->sha256_digest);
+
             hatlog("new node digest is: %s", digest);
 
             n = new_node(nodes[left_index], NULL, data, hexdigest(sha256(digest)));
-
-            hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
             
         }
+
         node_layer[node_layer_index] = n;
+        hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
         node_layer_index++;
         left_index = right_index + 1;
     }
 
     // Recursive call
     hatlog("recursive call with nodelayer at %p and layer_index at %ld", node_layer, node_layer_index);
+
     return build_merkle_tree(node_layer, node_layer_index);
 }
 
@@ -380,7 +395,7 @@ void print_command_line( char* program_name ) {
 
 int main(int argc, char *argv[])
 {
-    /* Just do some args checking */
+    /* Process args */
 
     if (argc == 3) {
     
