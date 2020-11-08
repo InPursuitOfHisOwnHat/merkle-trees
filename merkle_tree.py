@@ -21,23 +21,30 @@ def build_tree(nodes):
     
     node_layer = []
     left_index = 0
-    while(left_index < len(nodes)):
+    nodes_len = len(nodes)
+
+    while(left_index < nodes_len):
     
         right_index = left_index + 1
     
         if right_index < len(nodes):
         
+            left_data_hash = nodes[left_index].hashed_data.hexdigest().encode('utf-8')
+            right_data_hash = nodes[right_index].hashed_data.hexdigest().encode('utf-8')
+
             n = Node(nodes[left_index],
                      nodes[right_index], 
                      nodes[left_index].data + nodes[right_index].data,
-                     hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8') + nodes[right_index].hashed_data.hexdigest().encode('utf-8')))
+                     hashlib.sha256(left_data_hash + right_data_hash))
                      
         else:
         
+            left_data_hash = nodes[left_index].hashed_data.hexdigest().encode('utf-8')
+
             n = Node(nodes[left_index],
-                     None, 
+                     nodes[left_index], 
                      nodes[left_index].data + nodes[left_index].data,
-                     hashlib.sha256(nodes[left_index].hashed_data.hexdigest().encode('utf-8') + nodes[left_index].hashed_data.hexdigest().encode('utf-8')))
+                     hashlib.sha256(left_data_hash + left_data_hash))
 
         node_layer.append(n)
         left_index = right_index + 1

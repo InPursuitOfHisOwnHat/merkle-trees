@@ -68,7 +68,7 @@ char* read_dictionary_file(const char* dict_file) {
      *  so just pass file_size retrieved above into 
      *  the read() system call which tells it to grab the lot.
      *
-     *  We also check that the total amount read in (returned by read()
+     *  We also check that the total amount read - returned by read() -
      *  matches the file size. This confirms we got it all. I don't do 
      *  any retries at this point, just re-run the program.
      *
