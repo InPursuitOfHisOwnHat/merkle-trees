@@ -63,12 +63,14 @@ char* read_dictionary_file(const char* dict_file) {
     hatlog("initialised buffer size of %ld bytes (extra one for 0 (NULL terminator))", buffer_size);
 
     /*
-     *  Now read the whole file in. We know it will fit
-     *  comfortably, so just pass file_size retrieved above into 
-     *  the read() system call which tells is to grab the lot.
+     *  Now read the whole file in. I know it will fit
+     *  comfortably because this is 2020 and my machine has 16GB of RAM,
+     *  so just pass file_size retrieved above into 
+     *  the read() system call which tells it to grab the lot.
      *
      *  We also check that the total amount read in (returned by read()
-     *  matches the file size. This confirms we got it all.
+     *  matches the file size. This confirms we got it all. I don't do 
+     *  any retries at this point, just re-run the program.
      *
      */
      
@@ -93,7 +95,7 @@ char* read_dictionary_file(const char* dict_file) {
 
     return buffer;
     
-    }
+}
 
 long get_word_count(const char* data) {
 
@@ -102,7 +104,7 @@ long get_word_count(const char* data) {
      *  to do is count the number of newlines ('\n') to get the number of words and
      *  remember to add one for the last word which will terminate with '\0' 
      *  (end of the buffer), not '\n').
-    */
+     */
 
     hatlog("===== get_word_count() =====");
 
@@ -152,10 +154,20 @@ char * hexdigest(const unsigned char* hash) {
 unsigned char * sha256(const char * data) {
 
     /*
-    Use openssl library to get a SHA256 hash digest of `data`. This is returned
-    as 32 byte block pointed to by an unsigned char * so we will need a conversion
-    function to actually see the 64 character hash digest itself.
-    */
+     *  Use the SHA256 function in the official openssl library to get a hash digest
+     *  of data (via the data param).
+     *
+     *  The correct way to use OpenSSL is through the EVP interface which,
+     *  to be honest, isn't terrifically documented. You will find some
+     *  Stack Overflow answers around SSL advising to use the functions behind this
+     *  interface directly, but I'm wary of that - it's worth the hassle of getting
+     *  through the SSL docs and examples to use the preferred interfaces
+     *
+     *  Bizzarly, the EVP functions all return 1 for success and 0 for error ...
+     *  but it's a free country, I s'pose.
+     *
+     */
+
 
     hatlog("===== sha256() =====");
 
@@ -166,18 +178,18 @@ unsigned char * sha256(const char * data) {
 
     hatlog("initialising new mdctx");
     mdctx = EVP_MD_CTX_new();
-    
-    /* 
-    All these functions return 1 for success and 0 for error ... well, it's 
-    a free country. */
 
     EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
+    
     hatlog("updating mdctx digest with data [%s]", data);
     EVP_DigestUpdate(mdctx, data, data_len);
+    
     hatlog("initialising new hash_digest buffer");
     hash_digest = (unsigned char *)OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
+    
     EVP_DigestFinal_ex(mdctx, hash_digest, &data_len);
     hatlog("succesfully copied new digest to hash_digest buffer");
+    
     EVP_MD_CTX_free(mdctx);
     hatlog("successfully freed mdctx digest");
 
@@ -186,22 +198,32 @@ unsigned char * sha256(const char * data) {
 
 }
 
-/*
-A fairly basic, fairly standard tree node. Note that we include space for the
-actual data, something that would raise a few eyebrows with cryptography experts,
-...to put it mildly.
-*/
+/*  A fairly simple tree node struct.
+ * 
+ *  Only thing to explain that might raise a few eyebrows is that I'm 
+ *  including a representation of the data used to generate each hash.
+ *  
+ *  This is an exercise and I want to be able to take a few peeks 
+ *  under the hood either when debugging or tracing to check all is 
+ *  going as expected. 
+ * 
+ *  There is no real need to do this at all when building a Merkle 
+ *  Tree (and it will increase your attack  surface), just the hashes
+ *  is enough.
+ *  
+ */
 
 struct Node {
     struct Node * left;
     struct Node * right;
     char * sha256_digest;
     char * data;
-}; typedef struct Node Node;
+}; 
 
-/*
-A c-style 'constructor' for Nodes
-*/
+typedef struct Node Node;
+
+/* A helper function to construct nodes */
+
 Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
 
     hatlog("===== new_node() =====");
@@ -214,7 +236,7 @@ Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
     node->sha256_digest = sha256_digest;
 
     hatlog("returning new node at address %p", node);
-    hatlog("======================");
+    
     return node;
 }
 
@@ -224,9 +246,13 @@ Node ** build_leaves(char* data) {
     hatlog("===== build_leaves() =====");
 
     /*
-    *   We just need to allocate enough memory to store pointers to all the leaf nodes. 
-    *   We know how many leaves there will be once we call get_word_count()
-    */
+     *  Just need to allocate enough memory to store pointers to all the leaf nodes,
+     *  the actual nodes themselves will be allocated when they're created.
+     *
+     *  To find out how many leaves there are, we call get_word_count()
+     *
+     */
+    
     long word_count = get_word_count(data);
     Node ** leaves = malloc(sizeof(Node *)*word_count);
 
@@ -238,10 +264,23 @@ Node ** build_leaves(char* data) {
 
     hatlog("beginning loop through buffer using strtok");
 
+    /*
+     *  We know each word in our data is on a separate line or, to put it another way, 
+     *  each word is separated by a newline (\n) character (except for the last word
+     *  which ends with the null terminator (\0)). We can, therefore, use strtok() 
+     *  to tell us where, in the buffer, each word begins and then build a node 
+     *  around a char * pointer to that address.
+     *
+     */
+
     char * word = strtok(data, "\n\0");
+    
     while( word != NULL) {
+    
         hatlog("next word is [%s]", word);
+        
         n = new_node(NULL, NULL, word, hexdigest(sha256(word)));
+        
         leaves[index] = n;
         hash_count++;
         index++;
@@ -261,24 +300,23 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
     hatlog("passed in node ** with address of %p and len of %ld", nodes, len);
 
-    /* We already have the root, just send back */
     if (len == 1) {
 
-        hatlog("len is 1 so that means we already have the root. Returning nodes[0] at address %p", nodes[0]);
+        /* We already have the root, just send back */
+
+        hatlog("len is 1 so we have root. Returning nodes[0] at address %p", nodes[0]);
 
         return nodes[0];
     }
 
-    hatlog("len is greater than 1");
-
-    // We know how many nodes are in this layer because it's passed in, so just declare
-    // a big fat block of memory.
-    // Node * node_layer[len];
-    // hatlog("created array with space for %ld node pointers in node_layer at address %p", len, node_layer);
-
     /*
-    *   We know the number of nodes passed in will always be even because if we ever end up with any
-    *   odd number we duplicate the left node anyway, so safe to just halve the length, here.
+     *  This new layer of tree nodes will be exactly half the number of the previous layer
+     *  (passed in as the len parameter) because we split the layer into groups of two.
+     *   
+     *  We are safe in the knowledge that this number will always be divisible by
+     *  two because, in the event the previous layer had an odd number of nodes, the left
+     *  leaf of the final node would have been duplicated as the right node, 
+     *  as per convention.
     */
    
     long node_layer_size = len/2;
@@ -286,11 +324,11 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     Node ** node_layer = malloc(sizeof(Node *)*node_layer_size);
 
     hatlog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
-
+    
     int node_layer_index = 0;
     long left_index = 0;
     long right_index = 0;
-
+    
     Node* n;
     char* data;
     char* digest;
@@ -304,13 +342,21 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         right_index = left_index + 1;
 
         hatlog("left_index = %ld, right_index = %ld", left_index, right_index);
-        
+         
         if (right_index < len) {
 
-            hatlog("both left node and right node");
-
+            hatlog("both left node and right node available");
+            
             int data_len = strlen(nodes[left_index]->data) + strlen(nodes[right_index]->data) + 1;
 
+            /*  hatlog has a default buffer output size of 255 chars, so for large 
+             *  trees with lots of data not everything will be printed in the 
+             *  log output, below.
+             *
+             *  You can increase the size of this buffer at compile time using 
+             *  the -DHATLOG_MAX_BUFFER_SIZE flag
+             */
+             
             hatlog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", 
                                             nodes[left_index], 
                                             nodes[left_index]->data, 
@@ -325,16 +371,19 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("allocated 129 bytes for digest");
 
+            /* contactenate left and right node data into new node's data field */
+            
             strcpy(data, nodes[left_index]->data);
             strcat(data, nodes[right_index]->data);
 
-            hatlog("new node data is: %s", data);
-            hatlog("new node data len is: %ld", strlen(data));
+            hatlog("concatenated data is: %s", data);
 
+            /* concatenate left and right node hash digest into new node's digest field */
+            
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[right_index]->sha256_digest);
 
-            hatlog("new node digest is: %s", digest);
+            hatlog("concatenated digest is: %s", digest);
 
             n = new_node(nodes[left_index], nodes[right_index], data, hexdigest(sha256(digest)));
 
@@ -342,10 +391,10 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         else {
         
             /*
-            *   Only have a left, leaf left. Try saying that after six pints.
-            *   
-            *   This means we duplicate the left leaf to the right leaf of the
-            *   new node.
+             *  only have a left, leaf left ... Try saying that after six beers.
+             *   
+             *  this means we duplicate the left leaf to the right leaf of the
+             *  new node.
             */
 
             hatlog("only have left node available");
@@ -359,30 +408,42 @@ Node * build_merkle_tree(Node ** nodes, long len) {
             hatlog("allocated %ld bytes for new node data at %p", data_len, data);
 
             digest = malloc(sizeof(char) * 129);
+            
             hatlog("allocated 129 bytes for digest");
 
+            /* concatenate left data with itself */
+            
             strcpy(data, nodes[left_index]->data);
             strcat(data, nodes[left_index]->data);
 
-            hatlog("new node data is: %s", data);
-            hatlog("new node data len is: %ld", strlen(data));
+            hatlog("concatenated data is: %s", data);
 
+            /* concatenate left data hash with itself */
+            
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[left_index]->sha256_digest);
 
-            hatlog("new node digest is: %s", digest);
+            hatlog("new node concatenated digest is: %s", digest);
 
             n = new_node(nodes[left_index], nodes[left_index], data, hexdigest(sha256(digest)));
             
         }
 
         node_layer[node_layer_index] = n;
+        
         hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
+        
         node_layer_index++;
         left_index = right_index + 1;
     }
 
-    // Recursive call
+    /*
+     *  we make a recursive call, passing the newly formed layer (which will 
+     *  become the previous layer) and the node_layer_index which will now
+     *  contain the number of nodes added to the new layer and, therefore, it's length
+     *
+     */
+     
     hatlog("recursive call with nodelayer at %p and layer_index at %ld", node_layer, node_layer_index);
 
     return build_merkle_tree(node_layer, node_layer_index);
@@ -394,7 +455,7 @@ void print_command_line( char* program_name ) {
 
 int main(int argc, char *argv[])
 {
-    /* Process args */
+    /*  Process args */
 
     if (argc == 3) {
     
