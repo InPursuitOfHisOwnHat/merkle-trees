@@ -277,20 +277,12 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     // hatlog("created array with space for %ld node pointers in node_layer at address %p", len, node_layer);
 
     /*
-    *   A bit fudgy.
-    *   We know how many nodes have been passed in (the current layer) so we can work out how many
-    *   There will be in this layer. If is can be split into two evenly then no problem, just set the
-    *   size of the array to half the len. If it's odd then we need to add one after splitting in 
-    *   two
+    *   We know the number of nodes passed in will always be even because if we ever end up with any
+    *   odd number we duplicate the left node anyway, so safe to just halve the length, here.
     */
    
-    long node_layer_size = 0;
-    if (len % 2 == 0) {
-        node_layer_size = len/2;
-    }
-    else {
-        node_layer_size = (len/2)+1;
-    }
+    long node_layer_size = len/2;
+
     Node ** node_layer = malloc(sizeof(Node *)*node_layer_size);
 
     hatlog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
