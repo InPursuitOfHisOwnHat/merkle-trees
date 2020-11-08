@@ -348,7 +348,14 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
         }
         else {
-            // We only have a left leaf left (say that after eight pints)
+        
+            /*
+            *   Only have a left, leaf left. Try saying that after six pints.
+            *   
+            *   This means we duplicate the left leaf to the right leaf of the
+            *   new node.
+            */
+
             hatlog("only have left node available");
             
             int data_len = (strlen(nodes[left_index]->data) * 2) + 1;
@@ -373,7 +380,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("new node digest is: %s", digest);
 
-            n = new_node(nodes[left_index], NULL, data, hexdigest(sha256(digest)));
+            n = new_node(nodes[left_index], nodes[left_index], data, hexdigest(sha256(digest)));
             
         }
 
