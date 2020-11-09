@@ -5,12 +5,10 @@ class Node:
     def __init__(self,
                  left_node=None,
                  right_node=None,
-                 data=None,
                  hashed_data=None):
                  
         self.left = left_node
         self.right = right_node
-        self.data = data
         self.hashed_data = hashed_data
 
 
@@ -34,7 +32,6 @@ def build_tree(nodes):
 
             n = Node(nodes[left_index],
                      nodes[right_index], 
-                     nodes[left_index].data + nodes[right_index].data,
                      hashlib.sha256(left_data_hash + right_data_hash))
                      
         else:
@@ -43,7 +40,6 @@ def build_tree(nodes):
 
             n = Node(nodes[left_index],
                      nodes[left_index], 
-                     nodes[left_index].data + nodes[left_index].data,
                      hashlib.sha256(left_data_hash + left_data_hash))
 
         node_layer.append(n)
@@ -61,9 +57,9 @@ if __name__ == '__main__':
     leaves = []
     for item in data:
         n = Node(left_node=None, 
-                           right_node=None, 
-                           data=item, 
-                           hashed_data=hashlib.sha256(item.encode('utf-8')))
+                 right_node=None, 
+                 hashed_data=hashlib.sha256(item.encode('utf-8')))
+                 
         leaves.append(n)
     
     # Build our tree
