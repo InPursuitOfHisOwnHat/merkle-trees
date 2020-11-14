@@ -347,7 +347,8 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("both left node and right node available");
             
-            int data_len = strlen(nodes[left_index]->data) + strlen(nodes[right_index]->data) + 1;
+            int data_len = strlen(nodes[left_index]->data) 
+                                            + strlen(nodes[right_index]->data) + 1;
 
             /*  hatlog has a default buffer output size of 255 chars, so for large 
              *  trees with lots of data not everything will be printed in the 
@@ -385,7 +386,10 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("concatenated digest is: %s", digest);
 
-            n = new_node(nodes[left_index], nodes[right_index], data, hexdigest(sha256(digest)));
+            n = new_node(nodes[left_index], 
+                         nodes[right_index], 
+                         data, 
+                         hexdigest(sha256(digest)));
 
         }
         else {
@@ -425,7 +429,10 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             hatlog("new node concatenated digest is: %s", digest);
 
-            n = new_node(nodes[left_index], nodes[left_index], data, hexdigest(sha256(digest)));
+            n = new_node(nodes[left_index], 
+                         nodes[left_index], 
+                         data, 
+                         hexdigest(sha256(digest)));
             
         }
 
@@ -444,7 +451,9 @@ Node * build_merkle_tree(Node ** nodes, long len) {
      *
      */
      
-    hatlog("recursive call with nodelayer at %p and layer_index at %ld", node_layer, node_layer_index);
+    hatlog("recursive call with nodelayer at %p and layer_index at %ld", 
+            node_layer, 
+            node_layer_index);
 
     return build_merkle_tree(node_layer, node_layer_index);
 }
