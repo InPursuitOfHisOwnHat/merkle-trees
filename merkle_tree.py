@@ -14,9 +14,6 @@ class Node:
 
 def build_tree(nodes):
     
-    if len(nodes) == 1:
-        return nodes
-    
     node_layer = []
     left_index = 0
     nodes_len = len(nodes)
@@ -46,8 +43,17 @@ def build_tree(nodes):
         left_index = right_index + 1
     
     if len(node_layer) == 1:
+    
+        # we already have the root if there's only one node
+        # left, so just return it.
+    
         return node_layer[0]
+    
     else:
+    
+        # recursive call with this layer of nodes so we
+        # can create the next one above it
+        
         return build_tree(node_layer)
 
 
@@ -55,6 +61,10 @@ if __name__ == '__main__':
 
     data =['In', 'Pursuit', 'Of', 'His', 'Own', 'Hat']
     leaves = []
+    
+    # first we want to build the list of leaves (bottom)
+    # layer which we do with a simple for loop
+    
     for item in data:
         n = Node(left_node=None, 
                  right_node=None, 
@@ -62,7 +72,7 @@ if __name__ == '__main__':
                  
         leaves.append(n)
     
-    # Build our tree
+    # now we can build our tree and get the root
     root = build_tree(leaves)
 
     print("Root Has Digest: {0}".format(root.hashed_data.hexdigest()))
