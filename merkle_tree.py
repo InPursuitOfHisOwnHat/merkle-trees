@@ -16,13 +16,18 @@ def build_tree(nodes):
     
     node_layer = []
     left_index = 0
+    right_index = 0
     nodes_len = len(nodes)
 
     while(left_index < nodes_len):
     
         right_index = left_index + 1
     
-        if right_index < len(nodes):
+        if right_index < nodes_len:
+
+            # both left and right branches available, so take the hash values found
+            # in both branches, concatenate them and then hash the result to get
+            # the hash for our new node.
         
             left_data_hash = nodes[left_index].hashed_data.hexdigest().encode('utf-8')
             right_data_hash = nodes[right_index].hashed_data.hexdigest().encode('utf-8')
@@ -32,6 +37,10 @@ def build_tree(nodes):
                      hashlib.sha256(left_data_hash + right_data_hash))
                      
         else:
+
+            # only a left branch is available, so we 'fake' a right branch by 
+            # duplicating the left branch, concatenating both hash values and then 
+            # hashing that result to get the hash for our new node.
         
             left_data_hash = nodes[left_index].hashed_data.hexdigest().encode('utf-8')
 
@@ -39,7 +48,12 @@ def build_tree(nodes):
                      nodes[left_index], 
                      hashlib.sha256(left_data_hash + left_data_hash))
 
+        # add our new node to the current layer
+
         node_layer.append(n)
+
+        # move to the next left/right pair
+
         left_index = right_index + 1
     
     if len(node_layer) == 1:
@@ -69,10 +83,10 @@ if __name__ == '__main__':
         n = Node(left_node=None, 
                  right_node=None, 
                  hashed_data=hashlib.sha256(item.encode('utf-8')))
-                 
         leaves.append(n)
     
     # now we can build our tree and get the root
+
     root = build_tree(leaves)
 
     print("Root Has Digest: {0}".format(root.hashed_data.hexdigest()))
