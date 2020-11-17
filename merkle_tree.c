@@ -324,6 +324,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     Node ** node_layer = malloc(sizeof(Node *)*node_layer_size);
 
     hatlog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
+    printf("allocated space for %ld node pointers in node_layer at address %p\n", node_layer_size, node_layer);
     
     int node_layer_index = 0;
     long left_index = 0;
@@ -494,7 +495,9 @@ int main(int argc, char *argv[])
 
     char * words = read_dictionary_file(argv[1]);
     long word_count = get_word_count(words);
+    printf("building leaves\n");
     Node ** leaves = build_leaves(words);
+    printf("build %ld leaves out of %ld words\n", word_count, word_count);
     Node * root = build_merkle_tree(leaves, word_count);
     printf("Root digest is: %s\n", root->sha256_digest);
 
