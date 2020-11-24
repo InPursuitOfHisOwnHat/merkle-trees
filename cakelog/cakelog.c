@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -8,9 +9,10 @@
 #include <stdarg.h>
 #include <alloca.h>
 #include <stdbool.h>
+#include <math.h>
 #include "cakelog.h"
 
-#define TIME_STR_LEN 23
+#define TIMESTAMP_STR_LEN 27
 
 #ifndef CAKELOG_OUTPUT_STR_MAX_BUF_SIZE
     #define CAKELOG_OUTPUT_STR_MAX_BUF_SIZE 256
@@ -22,17 +24,35 @@ static bool _force_flush;
 
 char * get_timestamp(void) {
 
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+
+    /* to nearest ms */
+    int ms = lrint(tv.tv_usec / 1000.0); 
+
+    /* to nearest second */
+    if (ms >= 1000) {
+        ms -=1000;
+        tv.tv_sec++;
+    }
 
     time_t _time = time(NULL);
     struct tm *_tm = localtime(&_time);
-    char *timestamp_str = malloc(TIME_STR_LEN);
+    char *timestamp_str = malloc(TIMESTAMP_STR_LEN);
 
     if (timestamp_str == NULL) {
         perror("initialise_cakelog(): error in get_time_string() when attempting to allocate memory for timestamp.");
         exit(EXIT_FAILURE);
     }
 
-    snprintf(timestamp_str, TIME_STR_LEN, "[%.4d-%.2d-%.2d %.2d:%.2d:%.2d]\t",_tm->tm_year+1900,_tm->tm_mon+1,_tm->tm_mday, _tm->tm_hour, _tm->tm_min, _tm->tm_sec);
+    snprintf(timestamp_str, TIMESTAMP_STR_LEN, "[%.4d-%.2d-%.2d %.2d:%.2d:%.2d.%03d]\t",
+                                            _tm->tm_year+1900,
+                                            _tm->tm_mon+1,
+                                            _tm->tm_mday, 
+                                            _tm->tm_hour, 
+                                            _tm->tm_min, 
+                                            _tm->tm_sec,
+                                            ms);
     return timestamp_str;
 
 }
