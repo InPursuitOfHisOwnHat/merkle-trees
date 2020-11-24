@@ -11,24 +11,24 @@
 #include <openssl/evp.h>
 #include <stdbool.h>
 #include <mcheck.h>
-#include "./hatlog/hatlog.h"
+#include "./cakelog/cakelog.h"
 
 
 char* read_dictionary_file(const char* dict_file) {
 
-    hatlog("===== read_dictionary() =====");
-    hatlog("dictionary file: %s", dict_file);
+    cakelog("===== read_dictionary() =====");
+    cakelog("dictionary file: %s", dict_file);
 
     /* Get a file descriptor for the dictionary file */
 
     const int dictionary_fd = open(dict_file, O_RDONLY);
     if (dictionary_fd == -1) {
         perror("open()");
-        hatlog("failed to open dictionary file");
+        cakelog("failed to open dictionary file");
         exit(EXIT_FAILURE);
     }
     
-    hatlog("dictionary file opened with fd %d", dictionary_fd);
+    cakelog("dictionary file opened with fd %d", dictionary_fd);
 
     /*  
      *  The stat struct is a system struct that can be loaded with various
@@ -41,14 +41,14 @@ char* read_dictionary_file(const char* dict_file) {
     struct stat dict_stats;
 
     if (fstat(dictionary_fd, &dict_stats) == -1) {
-        hatlog("failed to get statistics for dictionary file");
+        cakelog("failed to get statistics for dictionary file");
         perror("fstat()");
         exit(EXIT_FAILURE);
     }
 
     const long file_size = dict_stats.st_size;
 
-    hatlog("retrieved file_size of %ld bytes", file_size);
+    cakelog("retrieved file_size of %ld bytes", file_size);
 
     /*  
      *  Now we have the file size we can allocate a block of memory
@@ -60,7 +60,7 @@ char* read_dictionary_file(const char* dict_file) {
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
 
-    hatlog("initialised buffer size of %ld bytes (extra one for 0 (NULL terminator))", buffer_size);
+    cakelog("initialised buffer size of %ld bytes (extra one for 0 (NULL terminator))", buffer_size);
 
     /*
      *  Now read the whole file in. I know it will fit
@@ -76,12 +76,12 @@ char* read_dictionary_file(const char* dict_file) {
      
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
-        hatlog("unable to load file data into buffer");
+        cakelog("unable to load file data into buffer");
         perror("read()");
         exit(EXIT_FAILURE);
     }
 
-    hatlog("loaded %ld bytes into buffer", bytes_read);
+    cakelog("loaded %ld bytes into buffer", bytes_read);
 
     /* Good housekeeping! */
 
@@ -91,7 +91,7 @@ char* read_dictionary_file(const char* dict_file) {
 
     buffer[file_size] = '\0';
 
-    hatlog("added 0 (NULL terminator) to buffer position %ld, returning buffer of %ld bytes", file_size);
+    cakelog("added 0 (NULL terminator) to buffer position %ld, returning buffer of %ld bytes", file_size);
 
     return buffer;
     
@@ -106,7 +106,7 @@ long get_word_count(const char* data) {
      *  (end of the buffer), not '\n').
      */
 
-    hatlog("===== get_word_count() =====");
+    cakelog("===== get_word_count() =====");
 
     long word_count = 0;
     for (int i=0; data[i] != '\0'; i++) {
@@ -117,14 +117,14 @@ long get_word_count(const char* data) {
 
      word_count++;
 
-     hatlog("returning word count of %ld", word_count);
+     cakelog("returning word count of %ld", word_count);
      
      return word_count;
 }
 
 char * hexdigest(const unsigned char* hash) {
 
-    hatlog("===== hexdigest() =====");
+    cakelog("===== hexdigest() =====");
 
     /* 
     *   The SHA256 digest is stored in a 32 byte block pointed to by an unsigned char *. 
@@ -145,7 +145,7 @@ char * hexdigest(const unsigned char* hash) {
 
     hexdigest[64]='\0';
 
-    hatlog("returning %s", hexdigest);
+    cakelog("returning %s", hexdigest);
 
     return hexdigest;
     
@@ -169,31 +169,31 @@ unsigned char * sha256(const char * data) {
      */
 
 
-    hatlog("===== sha256() =====");
+    cakelog("===== sha256() =====");
 
     unsigned int data_len = strlen(data);
     unsigned char * hash_digest;
 
     EVP_MD_CTX *mdctx;
 
-    hatlog("initialising new mdctx");
+    cakelog("initialising new mdctx");
     mdctx = EVP_MD_CTX_new();
 
     EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
     
-    hatlog("updating mdctx digest with data [%s]", data);
+    cakelog("updating mdctx digest with data [%s]", data);
     EVP_DigestUpdate(mdctx, data, data_len);
     
-    hatlog("initialising new hash_digest buffer");
+    cakelog("initialising new hash_digest buffer");
     hash_digest = (unsigned char *)OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
     
     EVP_DigestFinal_ex(mdctx, hash_digest, &data_len);
-    hatlog("succesfully copied new digest to hash_digest buffer");
+    cakelog("succesfully copied new digest to hash_digest buffer");
     
     EVP_MD_CTX_free(mdctx);
-    hatlog("successfully freed mdctx digest");
+    cakelog("successfully freed mdctx digest");
 
-    hatlog("returning");
+    cakelog("returning");
     return hash_digest;
 
 }
@@ -226,8 +226,8 @@ typedef struct Node Node;
 
 Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
 
-    hatlog("===== new_node() =====");
-    hatlog("left: %p, right: %p, data: [%s], hash: [%s]", left, right, data, sha256_digest);
+    cakelog("===== new_node() =====");
+    cakelog("left: %p, right: %p, data: [%s], hash: [%s]", left, right, data, sha256_digest);
 
     Node * node = malloc(sizeof(Node));
     node->left = left;
@@ -235,7 +235,7 @@ Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
     node->data = data;
     node->sha256_digest = sha256_digest;
 
-    hatlog("returning new node at address %p", node);
+    cakelog("returning new node at address %p", node);
     
     return node;
 }
@@ -243,7 +243,7 @@ Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
 
 Node ** build_leaves(char* data) {
 
-    hatlog("===== build_leaves() =====");
+    cakelog("===== build_leaves() =====");
 
     /*
      *  Just need to allocate enough memory to store pointers to all the leaf nodes,
@@ -256,13 +256,13 @@ Node ** build_leaves(char* data) {
     long word_count = get_word_count(data);
     Node ** leaves = malloc(sizeof(Node *)*word_count);
 
-    hatlog("allocated block of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char *) + 1);
+    cakelog("allocated block of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char *) + 1);
 
     long index = 0;
     long hash_count = 0;
     Node * n;
 
-    hatlog("beginning loop through buffer using strtok");
+    cakelog("beginning loop through buffer using strtok");
 
     /*
      *  We know each word in our data is on a separate line or, to put it another way, 
@@ -277,7 +277,7 @@ Node ** build_leaves(char* data) {
     
     while( word != NULL) {
     
-        hatlog("next word is [%s]", word);
+        cakelog("next word is [%s]", word);
         
         n = new_node(NULL, NULL, word, hexdigest(sha256(word)));
         
@@ -289,22 +289,22 @@ Node ** build_leaves(char* data) {
 
     int leaf_count = index;
 
-    hatlog("returning %ld leaves", leaf_count);
+    cakelog("returning %ld leaves", leaf_count);
 
     return leaves;
 }
 
 Node * build_merkle_tree(Node ** nodes, long len) {
 
-    hatlog("===== build_merkle_tree() =====");
+    cakelog("===== build_merkle_tree() =====");
 
-    hatlog("passed in node ** with address of %p and len of %ld", nodes, len);
+    cakelog("passed in node ** with address of %p and len of %ld", nodes, len);
 
     if (len == 1) {
 
         /* We already have the root, just send back */
 
-        hatlog("len is 1 so we have root. Returning nodes[0] at address %p", nodes[0]);
+        cakelog("len is 1 so we have root. Returning nodes[0] at address %p", nodes[0]);
 
         return nodes[0];
     }
@@ -323,7 +323,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
     Node ** node_layer = malloc(sizeof(Node *)*node_layer_size);
 
-    hatlog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
+    cakelog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
     printf("allocated space for %ld node pointers in node_layer at address %p\n", node_layer_size, node_layer);
     
     int node_layer_index = 0;
@@ -334,32 +334,32 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     char* data;
     char* digest;
 
-    hatlog("entering main loop");
+    cakelog("entering main loop");
 
     while (left_index < len) {
 
-        hatlog("top of loop");
+        cakelog("top of loop");
 
         right_index = left_index + 1;
 
-        hatlog("left_index = %ld, right_index = %ld", left_index, right_index);
+        cakelog("left_index = %ld, right_index = %ld", left_index, right_index);
          
         if (right_index < len) {
 
-            hatlog("both left node and right node available");
+            cakelog("both left node and right node available");
             
             int data_len = strlen(nodes[left_index]->data) 
                                             + strlen(nodes[right_index]->data) + 1;
 
-            /*  hatlog has a default buffer output size of 255 chars, so for large 
+            /*  cakelog has a default buffer output size of 255 chars, so for large 
              *  trees with lots of data not everything will be printed in the 
              *  log output, below.
              *
              *  You can increase the size of this buffer at compile time using 
-             *  the -DHATLOG_MAX_BUFFER_SIZE flag
+             *  the -DCAKELOG_MAX_BUFFER_SIZE flag
              */
              
-            hatlog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", 
+            cakelog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", 
                                             nodes[left_index], 
                                             nodes[left_index]->data, 
                                             nodes[right_index], 
@@ -367,25 +367,25 @@ Node * build_merkle_tree(Node ** nodes, long len) {
             
             data = malloc(sizeof(char) * data_len);
 
-            hatlog("allocated %ld bytes for new node data at %p", data_len, data);
+            cakelog("allocated %ld bytes for new node data at %p", data_len, data);
 
             digest = malloc(sizeof(char) * 129);
 
-            hatlog("allocated 129 bytes for digest");
+            cakelog("allocated 129 bytes for digest");
 
             /* contactenate left and right node data into new node's data field */
             
             strcpy(data, nodes[left_index]->data);
             strcat(data, nodes[right_index]->data);
 
-            hatlog("concatenated data is: %s", data);
+            cakelog("concatenated data is: %s", data);
 
             /* concatenate left and right node hash digest into new node's digest field */
             
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[right_index]->sha256_digest);
 
-            hatlog("concatenated digest is: %s", digest);
+            cakelog("concatenated digest is: %s", digest);
 
             n = new_node(nodes[left_index], 
                          nodes[right_index], 
@@ -402,33 +402,33 @@ Node * build_merkle_tree(Node ** nodes, long len) {
              *  new node.
             */
 
-            hatlog("only have left node available");
+            cakelog("only have left node available");
             
             int data_len = (strlen(nodes[left_index]->data) * 2) + 1;
 
-            hatlog("left node addr: %p, left node data: [%s]", nodes[left_index], nodes[left_index]->data);
+            cakelog("left node addr: %p, left node data: [%s]", nodes[left_index], nodes[left_index]->data);
 
             data = malloc(sizeof(char) * data_len);
 
-            hatlog("allocated %ld bytes for new node data at %p", data_len, data);
+            cakelog("allocated %ld bytes for new node data at %p", data_len, data);
 
             digest = malloc(sizeof(char) * 129);
             
-            hatlog("allocated 129 bytes for digest");
+            cakelog("allocated 129 bytes for digest");
 
             /* concatenate left data with itself */
             
             strcpy(data, nodes[left_index]->data);
             strcat(data, nodes[left_index]->data);
 
-            hatlog("concatenated data is: %s", data);
+            cakelog("concatenated data is: %s", data);
 
             /* concatenate left data hash with itself */
             
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[left_index]->sha256_digest);
 
-            hatlog("new node concatenated digest is: %s", digest);
+            cakelog("new node concatenated digest is: %s", digest);
 
             n = new_node(nodes[left_index], 
                          nodes[left_index], 
@@ -439,7 +439,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
         node_layer[node_layer_index] = n;
         
-        hatlog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
+        cakelog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
         
         node_layer_index++;
         left_index = right_index + 1;
@@ -452,7 +452,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
      *
      */
      
-    hatlog("recursive call with nodelayer at %p and layer_index at %ld", 
+    cakelog("recursive call with nodelayer at %p and layer_index at %ld", 
             node_layer, 
             node_layer_index);
 
@@ -472,13 +472,13 @@ int main(int argc, char *argv[])
         /* Debug with no flush */
         
         if (strcmp(argv[2], "-d") == 0) {
-            hatlog_initialise(argv[0],false);
+            cakelog_initialise(argv[0],false);
         }
         
         /* Debug with flush */
         
         else if (strcmp(argv[2], "-df") == 0) {
-            hatlog_initialise(argv[0],true);
+            cakelog_initialise(argv[0],true);
         }
         
         /* No valid debug option */
@@ -501,6 +501,6 @@ int main(int argc, char *argv[])
     Node * root = build_merkle_tree(leaves, word_count);
     printf("Root digest is: %s\n", root->sha256_digest);
 
-    hatlog_stop();
+    cakelog_stop();
 
 }
