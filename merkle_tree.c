@@ -241,39 +241,22 @@ Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
 }
 
 
-Node ** build_leaves(char* data) {
+Node** build_leaves(char* buffer) {
 
     cakelog("===== build_leaves() =====");
+  
+    long word_count = get_word_count(buffer);
+    Node **leaves = malloc(sizeof(Node*)*word_count);
 
-    /*
-     *  Just need to allocate enough memory to store pointers to all the leaf nodes,
-     *  the actual nodes themselves will be allocated when they're created.
-     *
-     *  To find out how many leaves there are, we call get_word_count()
-     *
-     */
-    
-    long word_count = get_word_count(data);
-    Node ** leaves = malloc(sizeof(Node *)*word_count);
-
-    cakelog("allocated block of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char *) + 1);
+    cakelog("allocated block of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char*) + 1);
 
     long index = 0;
     long hash_count = 0;
-    Node * n;
+    Node *n;
 
     cakelog("beginning loop through buffer using strtok");
 
-    /*
-     *  We know each word in our data is on a separate line or, to put it another way, 
-     *  each word is separated by a newline (\n) character (except for the last word
-     *  which ends with the null terminator (\0)). We can, therefore, use strtok() 
-     *  to tell us where, in the buffer, each word begins and then build a node 
-     *  around a char * pointer to that address.
-     *
-     */
-
-    char * word = strtok(data, "\n\0");
+    char * word = strtok(buffer, "\n\0");
     
     while( word != NULL) {
     
