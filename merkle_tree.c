@@ -153,22 +153,6 @@ char * hexdigest(const unsigned char* hash) {
 
 unsigned char * sha256(const char * data) {
 
-    /*
-     *  Use the SHA256 function in the official openssl library to get a hash digest
-     *  of data (via the data param).
-     *
-     *  The correct way to use OpenSSL is through the EVP interface which,
-     *  to be honest, isn't terrifically documented. You will find some
-     *  Stack Overflow answers around SSL advising to use the functions behind this
-     *  interface directly, but I'm wary of that - it's worth the hassle of getting
-     *  through the SSL docs and examples to use the preferred interfaces
-     *
-     *  Bizzarly, the EVP functions all return 1 for success and 0 for error ...
-     *  but it's a free country, I s'pose.
-     *
-     */
-
-
     cakelog("===== sha256() =====");
 
     unsigned int data_len = strlen(data);
@@ -198,21 +182,6 @@ unsigned char * sha256(const char * data) {
 
 }
 
-/*  A fairly simple tree node struct.
- * 
- *  Only thing to explain that might raise a few eyebrows is that I'm 
- *  including a representation of the data used to generate each hash.
- *  
- *  This is an exercise and I want to be able to take a few peeks 
- *  under the hood either when debugging or tracing to check all is 
- *  going as expected. 
- * 
- *  There is no real need to do this at all when building a Merkle 
- *  Tree (and it will increase your attack  surface), just the hashes
- *  is enough.
- *  
- */
-
 struct Node {
     struct Node * left;
     struct Node * right;
@@ -222,17 +191,14 @@ struct Node {
 
 typedef struct Node Node;
 
-/* A helper function to construct nodes */
-
-Node * new_node(Node * left, Node * right, char * data, char * sha256_digest) {
+Node * new_node(Node * left, Node * right, char * sha256_digest) {
 
     cakelog("===== new_node() =====");
-    cakelog("left: %p, right: %p, data: [%s], hash: [%s]", left, right, data, sha256_digest);
+    cakelog("left: %p, right: %p, hash: [%s]", left, right, sha256_digest);
 
     Node * node = malloc(sizeof(Node));
     node->left = left;
     node->right = right;
-    node->data = data;
     node->sha256_digest = sha256_digest;
 
     cakelog("returning new node at address %p", node);
@@ -262,7 +228,7 @@ Node** build_leaves(char* buffer) {
     
         cakelog("next word is [%s]", word);
         
-        n = new_node(NULL, NULL, word, hexdigest(sha256(word)));
+        n = new_node(NULL, NULL, hexdigest(sha256(word)));
         
         leaves[index] = n;
         hash_count++;
@@ -285,22 +251,10 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
     if (len == 1) {
 
-        /* We already have the root, just send back */
-
         cakelog("len is 1 so we have root. Returning nodes[0] at address %p", nodes[0]);
 
         return nodes[0];
     }
-
-    /*
-     *  This new layer of tree nodes will be exactly half the number of the previous layer
-     *  (passed in as the len parameter) because we split the layer into groups of two.
-     *   
-     *  We are safe in the knowledge that this number will always be divisible by
-     *  two because, in the event the previous layer had an odd number of nodes, the left
-     *  leaf of the final node would have been duplicated as the right node, 
-     *  as per convention.
-    */
    
     long node_layer_size = len/2;
 
@@ -314,7 +268,6 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     long right_index = 0;
     
     Node* n;
-    char* data;
     char* digest;
 
     cakelog("entering main loop");
@@ -330,41 +283,13 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         if (right_index < len) {
 
             cakelog("both left node and right node available");
+                       
+            cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", nodes[left_index], nodes[left_index]->sha256_digest,  nodes[right_index], nodes[right_index]->sha256_digest);
             
-            int data_len = strlen(nodes[left_index]->data) 
-                                            + strlen(nodes[right_index]->data) + 1;
-
-            /*  cakelog has a default buffer output size of 255 chars, so for large 
-             *  trees with lots of data not everything will be printed in the 
-             *  log output, below.
-             *
-             *  You can increase the size of this buffer at compile time using 
-             *  the -DCAKELOG_MAX_BUFFER_SIZE flag
-             */
-             
-            cakelog("left node addr: %p, left node data: [%s], right node addr: %p, right node data: [%s]", 
-                                            nodes[left_index], 
-                                            nodes[left_index]->data, 
-                                            nodes[right_index], 
-                                            nodes[right_index]->data);
-            
-            data = malloc(sizeof(char) * data_len);
-
-            cakelog("allocated %ld bytes for new node data at %p", data_len, data);
-
             digest = malloc(sizeof(char) * 129);
 
             cakelog("allocated 129 bytes for digest");
 
-            /* contactenate left and right node data into new node's data field */
-            
-            strcpy(data, nodes[left_index]->data);
-            strcat(data, nodes[right_index]->data);
-
-            cakelog("concatenated data is: %s", data);
-
-            /* concatenate left and right node hash digest into new node's digest field */
-            
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[right_index]->sha256_digest);
 
@@ -372,42 +297,17 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             n = new_node(nodes[left_index], 
                          nodes[right_index], 
-                         data, 
                          hexdigest(sha256(digest)));
 
         }
         else {
         
-            /*
-             *  only have a left, leaf left ... Try saying that after six beers.
-             *   
-             *  this means we duplicate the left leaf to the right leaf of the
-             *  new node.
-            */
-
             cakelog("only have left node available");
             
-            int data_len = (strlen(nodes[left_index]->data) * 2) + 1;
-
-            cakelog("left node addr: %p, left node data: [%s]", nodes[left_index], nodes[left_index]->data);
-
-            data = malloc(sizeof(char) * data_len);
-
-            cakelog("allocated %ld bytes for new node data at %p", data_len, data);
+            cakelog("left node addr: %p, left node digest: [%s]", nodes[left_index], nodes[left_index]->sha256_digest);
 
             digest = malloc(sizeof(char) * 129);
-            
-            cakelog("allocated 129 bytes for digest");
-
-            /* concatenate left data with itself */
-            
-            strcpy(data, nodes[left_index]->data);
-            strcat(data, nodes[left_index]->data);
-
-            cakelog("concatenated data is: %s", data);
-
-            /* concatenate left data hash with itself */
-            
+                       
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[left_index]->sha256_digest);
 
@@ -415,9 +315,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
 
             n = new_node(nodes[left_index], 
                          nodes[left_index], 
-                         data, 
                          hexdigest(sha256(digest)));
-            
         }
 
         node_layer[node_layer_index] = n;
@@ -427,14 +325,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         node_layer_index++;
         left_index = right_index + 1;
     }
-
-    /*
-     *  we make a recursive call, passing the newly formed layer (which will 
-     *  become the previous layer) and the node_layer_index which will now
-     *  contain the number of nodes added to the new layer and, therefore, it's length
-     *
-     */
-     
+    
     cakelog("recursive call with nodelayer at %p and layer_index at %ld", 
             node_layer, 
             node_layer_index);
