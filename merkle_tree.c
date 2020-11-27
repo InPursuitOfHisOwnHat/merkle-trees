@@ -13,30 +13,18 @@
 #include <mcheck.h>
 #include "./cakelog/cakelog.h"
 
-
 char* read_dictionary_file(const char* dict_file) {
 
-    cakelog("===== read_dictionary() =====");
-    cakelog("dictionary file: %s", dict_file);
-
-    /* Get a file descriptor for the dictionary file */
+    cakelog("===== read_dictionary_file() =====");
 
     const int dictionary_fd = open(dict_file, O_RDONLY);
     if (dictionary_fd == -1) {
         perror("open()");
-        cakelog("failed to open dictionary file");
+        cakelog("failed to open file: '%s'", dict_file);
         exit(EXIT_FAILURE);
     }
-    
-    cakelog("dictionary file opened with fd %d", dictionary_fd);
 
-    /*  
-     *  The stat struct is a system struct that can be loaded with various
-     *  statistics about a file using the fstat() system call. 
-     * 
-     *  We're using it here so we can get the file size in bytes.
-     *
-     */
+    cakelog("opened file %s", dict_file);
     
     struct stat dict_stats;
 
@@ -48,63 +36,29 @@ char* read_dictionary_file(const char* dict_file) {
 
     const long file_size = dict_stats.st_size;
 
-    cakelog("retrieved file_size of %ld bytes", file_size);
-
-    /*  
-     *  Now we have the file size we can allocate a block of memory
-     *  big enough for us to load the entire file in plus one extra
-     *  byte for the '\0' (NULL terminator).
-     *
-     */
+    cakelog("file_size is %ld bytes", dict_file, file_size);
 
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
-
-    cakelog("initialised buffer size of %ld bytes (extra one for 0 (NULL terminator))", buffer_size);
-
-    /*
-     *  Now read the whole file in. I know it will fit
-     *  comfortably because this is 2020 and my machine has 16GB of RAM,
-     *  so just pass file_size retrieved above into 
-     *  the read() system call which tells it to grab the lot.
-     *
-     *  We also check that the total amount read - returned by read() -
-     *  matches the file size. This confirms we got it all. I don't do 
-     *  any retries at this point, just re-run the program.
-     *
-     */
      
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
-        cakelog("unable to load file data into buffer");
+        cakelog("unable to load file");
         perror("read()");
         exit(EXIT_FAILURE);
     }
 
     cakelog("loaded %ld bytes into buffer", bytes_read);
 
-    /* Good housekeeping! */
-
     close(dictionary_fd);
 
-    /* Add the NULL terminator to the buffer */
-
     buffer[file_size] = '\0';
-
-    cakelog("added 0 (NULL terminator) to buffer position %ld, returning buffer of %ld bytes", file_size);
 
     return buffer;
     
 }
 
 long get_word_count(const char* data) {
-
-    /* 
-     *  We know the data is made of words, one on each line, so all we really need
-     *  to do is count the number of newlines ('\n') to get the number of words and
-     *  remember to add one for the last word which will terminate with '\0' 
-     *  (end of the buffer), not '\n').
-     */
 
     cakelog("===== get_word_count() =====");
 
@@ -125,18 +79,6 @@ long get_word_count(const char* data) {
 char * hexdigest(const unsigned char* hash) {
 
     cakelog("===== hexdigest() =====");
-
-    /* 
-    *   The SHA256 digest is stored in a 32 byte block pointed to by an unsigned char *. 
-    *   We want to each byte converted to its hex value, two alphanumeric characters per byte.
-    *   This means we need a 64 character buffer available, plus an extra one
-    *   for the '\0'.
-
-    *   We move along the SHA256 digest one byte at a time, converting it to two alphanumeric
-    *   characters and storing the result in the buffer *. We then have to move to
-    *   the next available slot in the string which is the one after the next because,
-    *   remember, each byte of the digest takes up two characters.
-    */
 
     char * hexdigest = calloc(1,65);
 
@@ -161,8 +103,8 @@ unsigned char * sha256(const char * data) {
     EVP_MD_CTX *mdctx;
 
     cakelog("initialising new mdctx");
-    mdctx = EVP_MD_CTX_new();
 
+    mdctx = EVP_MD_CTX_new();
     EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
     
     cakelog("updating mdctx digest with data [%s]", data);
@@ -177,7 +119,6 @@ unsigned char * sha256(const char * data) {
     EVP_MD_CTX_free(mdctx);
     cakelog("successfully freed mdctx digest");
 
-    cakelog("returning");
     return hash_digest;
 
 }
@@ -214,7 +155,7 @@ Node** build_leaves(char* buffer) {
     long word_count = get_word_count(buffer);
     Node **leaves = malloc(sizeof(Node*)*word_count);
 
-    cakelog("allocated block of %ld bytes for leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char*) + 1);
+    cakelog("allocated %ld bytes for %ld leaves (number of leaves * sizeof(pointer) + NULL terminator", word_count * sizeof(unsigned char*) + 1, word_count);
 
     long index = 0;
     long hash_count = 0;
@@ -225,20 +166,18 @@ Node** build_leaves(char* buffer) {
     char * word = strtok(buffer, "\n\0");
     
     while( word != NULL) {
-    
+
         cakelog("next word is [%s]", word);
-        
+
         n = new_node(NULL, NULL, hexdigest(sha256(word)));
-        
         leaves[index] = n;
         hash_count++;
         index++;
         word = strtok(NULL, "\n\0");
+
     }
 
-    int leaf_count = index;
-
-    cakelog("returning %ld leaves", leaf_count);
+    cakelog("returning %ld leaves", index);
 
     return leaves;
 }
@@ -369,9 +308,10 @@ int main(int argc, char *argv[])
 
     char * words = read_dictionary_file(argv[1]);
     long word_count = get_word_count(words);
+
     printf("building leaves\n");
+
     Node ** leaves = build_leaves(words);
-    printf("build %ld leaves out of %ld words\n", word_count, word_count);
     Node * root = build_merkle_tree(leaves, word_count);
     printf("Root digest is: %s\n", root->sha256_digest);
 
