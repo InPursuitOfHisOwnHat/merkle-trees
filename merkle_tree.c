@@ -11,9 +11,10 @@
 #include <openssl/evp.h>
 #include <stdbool.h>
 #include <mcheck.h>
+#include <math.h>
 #include "./cakelog/cakelog.h"
 
-char* read_dictionary_file(const char* dict_file) {
+char* read_data_file(const char *dict_file) {
 
     cakelog("===== read_dictionary_file() =====");
 
@@ -182,11 +183,9 @@ Node** build_leaves(char* buffer) {
     return leaves;
 }
 
-Node * build_merkle_tree(Node ** nodes, long len) {
+Node* build_merkle_tree(Node **nodes, long len) {
 
     cakelog("===== build_merkle_tree() =====");
-
-    cakelog("passed in node ** with address of %p and len of %ld", nodes, len);
 
     if (len == 1) {
 
@@ -195,9 +194,9 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         return nodes[0];
     }
    
-    long node_layer_size = len/2;
+    long node_layer_size = ceil(len/2.0);
 
-    Node ** node_layer = malloc(sizeof(Node *)*node_layer_size);
+    Node **node_layer = malloc(sizeof(Node*)*node_layer_size);
 
     cakelog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
     printf("allocated space for %ld node pointers in node_layer at address %p\n", node_layer_size, node_layer);
@@ -206,18 +205,14 @@ Node * build_merkle_tree(Node ** nodes, long len) {
     long left_index = 0;
     long right_index = 0;
     
-    Node* n;
-    char* digest;
-
-    cakelog("entering main loop");
+    Node *n;
+    char *digest;
 
     while (left_index < len) {
 
         cakelog("top of loop");
 
         right_index = left_index + 1;
-
-        cakelog("left_index = %ld, right_index = %ld", left_index, right_index);
          
         if (right_index < len) {
 
@@ -226,8 +221,6 @@ Node * build_merkle_tree(Node ** nodes, long len) {
             cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", nodes[left_index], nodes[left_index]->sha256_digest,  nodes[right_index], nodes[right_index]->sha256_digest);
             
             digest = malloc(sizeof(char) * 129);
-
-            cakelog("allocated 129 bytes for digest");
 
             strcpy(digest, nodes[left_index]->sha256_digest);
             strcat(digest, nodes[right_index]->sha256_digest);
@@ -239,6 +232,7 @@ Node * build_merkle_tree(Node ** nodes, long len) {
                          hexdigest(sha256(digest)));
 
         }
+
         else {
         
             cakelog("only have left node available");
@@ -265,10 +259,6 @@ Node * build_merkle_tree(Node ** nodes, long len) {
         left_index = right_index + 1;
     }
     
-    cakelog("recursive call with nodelayer at %p and layer_index at %ld", 
-            node_layer, 
-            node_layer_index);
-
     return build_merkle_tree(node_layer, node_layer_index);
 }
 
@@ -306,7 +296,7 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
     }
 
-    char * words = read_dictionary_file(argv[1]);
+    char * words = read_data_file(argv[1]);
     long word_count = get_word_count(words);
 
     printf("building leaves\n");
