@@ -37,7 +37,7 @@ char* read_data_file(const char *dict_file) {
 
     const long file_size = dict_stats.st_size;
 
-    cakelog("file_size is %ld bytes", dict_file, file_size);
+    cakelog("file_size is %ld bytes", file_size);
 
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
@@ -205,7 +205,7 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
     long previous_layer_right_index = 0;
     
     Node *n;
-    char *digest;
+    char *digest = malloc(sizeof(char) * 129);
 
     while (previous_layer_left_index < previous_layer_len) {
 
@@ -219,8 +219,6 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
                        
             cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest,  previous_layer[previous_layer_right_index], previous_layer[previous_layer_right_index]->sha256_digest);
             
-            digest = malloc(sizeof(char) * 129);
-
             strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
             strcat(digest, previous_layer[previous_layer_right_index]->sha256_digest);
 
@@ -237,9 +235,7 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
             cakelog("only have left node available");
             
             cakelog("left node addr: %p, left node digest: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest);
-
-            digest = malloc(sizeof(char) * 129);
-                       
+                     
             strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
             strcat(digest, previous_layer[previous_layer_left_index]->sha256_digest);
 

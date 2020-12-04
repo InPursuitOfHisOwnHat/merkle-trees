@@ -13,18 +13,18 @@ static bool _force_flush;
 char * get_timestamp(void) {
 
     struct timeval tv;
-
     gettimeofday(&tv, NULL);
-
-    struct tm *_tm = localtime(&tv);
+    
+    time_t t = tv.tv_sec;
+    struct tm *_tm = localtime(&t);
 
     /* ms */
-    int ms = lrint(tv.tv_usec / 1000.0); 
+    int ms = lrint(t / 1000.0); 
 
     /* to nearest second */
     if (ms >= 1000) {
         ms -=1000;
-        tv.tv_sec++;
+        t++;
     }
 
     char *timestamp_str = malloc(TIMESTAMP_STR_LEN);
