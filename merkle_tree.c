@@ -183,52 +183,51 @@ Node** build_leaves(char* buffer) {
     return leaves;
 }
 
-Node* build_merkle_tree(Node **nodes, long len) {
+Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
 
     cakelog("===== build_merkle_tree() =====");
 
-    if (len == 1) {
+    if (previous_layer_len == 1) {
 
-        cakelog("len is 1 so we have root. Returning nodes[0] at address %p", nodes[0]);
+        cakelog("previous_layer_len is 1 so we have root. Returning previous_layer[0] at address %p", previous_layer[0]);
 
-        return nodes[0];
+        return previous_layer[0];
     }
    
-    long node_layer_size = ceil(len/2.0);
+    long next_layer_len = ceil(previous_layer_len/2.0);
+    Node **next_layer = malloc(sizeof(Node*)*next_layer_len);
 
-    Node **node_layer = malloc(sizeof(Node*)*node_layer_size);
-
-    cakelog("allocated space for %ld node pointers in node_layer at address %p", node_layer_size, node_layer);
-    printf("allocated space for %ld node pointers in node_layer at address %p\n", node_layer_size, node_layer);
+    cakelog("allocated space for %ld node pointers in next_layer at address %p", next_layer_len, next_layer);
+    printf("allocated space for %ld node pointers in next_layer at address %p\n", next_layer_len, next_layer);
     
-    int node_layer_index = 0;
-    long left_index = 0;
-    long right_index = 0;
+    int next_layer_index = 0;
+    long previous_layer_left_index = 0;
+    long previous_layer_right_index = 0;
     
     Node *n;
     char *digest;
 
-    while (left_index < len) {
+    while (previous_layer_left_index < previous_layer_len) {
 
         cakelog("top of loop");
 
-        right_index = left_index + 1;
-         
-        if (right_index < len) {
+        previous_layer_right_index = previous_layer_left_index + 1;
+
+        if (previous_layer_right_index < previous_layer_len) {
 
             cakelog("both left node and right node available");
                        
-            cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", nodes[left_index], nodes[left_index]->sha256_digest,  nodes[right_index], nodes[right_index]->sha256_digest);
+            cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest,  previous_layer[previous_layer_right_index], previous_layer[previous_layer_right_index]->sha256_digest);
             
             digest = malloc(sizeof(char) * 129);
 
-            strcpy(digest, nodes[left_index]->sha256_digest);
-            strcat(digest, nodes[right_index]->sha256_digest);
+            strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
+            strcat(digest, previous_layer[previous_layer_right_index]->sha256_digest);
 
             cakelog("concatenated digest is: %s", digest);
 
-            n = new_node(nodes[left_index], 
-                         nodes[right_index], 
+            n = new_node(previous_layer[previous_layer_left_index], 
+                         previous_layer[previous_layer_right_index], 
                          hexdigest(sha256(digest)));
 
         }
@@ -237,29 +236,29 @@ Node* build_merkle_tree(Node **nodes, long len) {
         
             cakelog("only have left node available");
             
-            cakelog("left node addr: %p, left node digest: [%s]", nodes[left_index], nodes[left_index]->sha256_digest);
+            cakelog("left node addr: %p, left node digest: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest);
 
             digest = malloc(sizeof(char) * 129);
                        
-            strcpy(digest, nodes[left_index]->sha256_digest);
-            strcat(digest, nodes[left_index]->sha256_digest);
+            strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
+            strcat(digest, previous_layer[previous_layer_left_index]->sha256_digest);
 
             cakelog("new node concatenated digest is: %s", digest);
 
-            n = new_node(nodes[left_index], 
-                         nodes[left_index], 
+            n = new_node(previous_layer[previous_layer_left_index], 
+                         previous_layer[previous_layer_left_index], 
                          hexdigest(sha256(digest)));
         }
 
-        node_layer[node_layer_index] = n;
+        next_layer[next_layer_index] = n;
         
-        cakelog("added node at address %p to node_layer with an index of %ld", n, node_layer_index);
+        cakelog("added node at address %p to next_layer with an index of %ld", n, next_layer_index);
         
-        node_layer_index++;
-        left_index = right_index + 1;
+        next_layer_index++;
+        previous_layer_left_index = previous_layer_right_index + 1;
     }
     
-    return build_merkle_tree(node_layer, node_layer_index);
+    return build_merkle_tree(next_layer, next_layer_index);
 }
 
 void print_command_line( char* program_name ) {
