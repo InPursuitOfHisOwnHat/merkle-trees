@@ -77,14 +77,15 @@ long get_word_count(const char* data) {
      return word_count;
 }
 
-char * hexdigest(const unsigned char* hash) {
+char* hexdigest(const unsigned char *hash) {
 
     cakelog("===== hexdigest() =====");
 
-    char * hexdigest = calloc(1,65);
+    char *hexdigest = malloc((SHA256_DIGEST_LENGTH*2)+1);
 
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
 		sprintf(hexdigest + (i * 2), "%02x", hash[i]);
+    }
 
     hexdigest[64]='\0';
 
@@ -94,12 +95,12 @@ char * hexdigest(const unsigned char* hash) {
     
 }
 
-unsigned char * sha256(const char * data) {
+unsigned char* sha256(const char *data) {
 
     cakelog("===== sha256() =====");
 
     unsigned int data_len = strlen(data);
-    unsigned char * hash_digest;
+    unsigned char *hash_digest;
 
     EVP_MD_CTX *mdctx;
 
@@ -112,7 +113,7 @@ unsigned char * sha256(const char * data) {
     EVP_DigestUpdate(mdctx, data, data_len);
     
     cakelog("initialising new hash_digest buffer");
-    hash_digest = (unsigned char *)OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
+    hash_digest = OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
     
     EVP_DigestFinal_ex(mdctx, hash_digest, &data_len);
     cakelog("succesfully copied new digest to hash_digest buffer");
@@ -291,13 +292,13 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
     }
 
-    char * words = read_data_file(argv[1]);
+    char *words = read_data_file(argv[1]);
     long word_count = get_word_count(words);
 
     printf("building leaves\n");
 
-    Node ** leaves = build_leaves(words);
-    Node * root = build_merkle_tree(leaves, word_count);
+    Node **leaves = build_leaves(words);
+    Node *root = build_merkle_tree(leaves, word_count);
     printf("Root digest is: %s\n", root->sha256_digest);
 
     cakelog_stop();
