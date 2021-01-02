@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <mcheck.h>
 #include <math.h>
+#include <getopt.h>
 #include "./cakelog/cakelog.h"
 
 char* read_data_file(const char *dict_file) {
@@ -129,7 +130,6 @@ struct Node {
     struct Node * left;
     struct Node * right;
     char * sha256_digest;
-    char * data;
 }; 
 
 typedef struct Node Node;
@@ -258,41 +258,31 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
     return build_merkle_tree(next_layer, next_layer_index);
 }
 
-void print_command_line( char* program_name ) {
-    printf("%s [-d, debug | -df, debug & flush] [filename]\n", program_name);
-}
+int main(int argc, char *argv[]) {
 
-int main(int argc, char *argv[])
-{
-    /*  Process args */
+    int opt;
 
-    if (argc == 3) {
-    
-        /* Debug with no flush */
-        
-        if (strcmp(argv[2], "-d") == 0) {
-            cakelog_initialise(argv[0],false);
+    while ((opt = getopt(argc, argv, "df")) != -1) {
+        if ((unsigned char)opt == 'd') {
+            /* debug without flush */
+            cakelog_initialise(argv[0], false);
         }
-        
-        /* Debug with flush */
-        
-        else if (strcmp(argv[2], "-df") == 0) {
-            cakelog_initialise(argv[0],true);
+        else if ((unsigned char)opt == 'f') {
+            /* debug with flush */
+            cakelog_initialise(argv[0], true);
         }
-        
-        /* No valid debug option */
-        
         else {
-            print_command_line(argv[0]);
+            printf("Usage: %s [-d] <datafile>\n", argv[0]);
             exit(EXIT_FAILURE);
         }
     }
-    else if (argc < 2) {
-            print_command_line(argv[0]);
-            exit(EXIT_FAILURE);
-    }
 
-    char *words = read_data_file(argv[1]);
+	if (optind >= argc) {
+		printf("Missing filename (Usage: %s [-d] <datafile>\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+    char *words = read_data_file(argv[optind]);
     long word_count = get_word_count(words);
 
     printf("building leaves\n");
