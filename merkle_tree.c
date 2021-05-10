@@ -134,7 +134,7 @@ struct Node {
 
 typedef struct Node Node;
 
-Node * new_node(Node * left, Node * right, char * sha256_digest) {
+Node* new_node(Node * left, Node * right, char * sha256_digest) {
 
     cakelog("===== new_node() =====");
     cakelog("left: %p, right: %p, hash: [%s]", left, right, sha256_digest);
