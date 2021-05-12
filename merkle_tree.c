@@ -13,7 +13,56 @@
 #include <mcheck.h>
 #include <math.h>
 #include <getopt.h>
+
+// The cakelog library (https://github.com/chris-j-akers/cakelog) is used to
+// write out a timestamped debug log.
+
 #include "./cakelog/cakelog.h"
+
+// A tree is made up of Nodes, and a Node can be implemented as a basic struct.
+// Recursive `left` and `right` references to itself for the branches (or `NULL`
+// if a leaf) and a `char*` for the data which, in this case, is a 64-character
+// hash digest stored as a hexidecimal string.
+
+struct Node {
+    struct Node * left;
+    struct Node * right;
+    char * sha256_digest;
+}; 
+
+typedef struct Node Node;
+
+
+// A basic C-style constructor reduces clutter when creating Nodes as the tree
+// is being built.
+
+Node* new_node(Node * left, Node * right, char * sha256_digest) {
+
+    cakelog("===== new_node() =====");
+    cakelog("left: %p, right: %p, hash: [%s]", left, right, sha256_digest);
+
+    Node * node = malloc(sizeof(Node));
+    node->left = left;
+    node->right = right;
+    node->sha256_digest = sha256_digest;
+
+    cakelog("returning new node at address %p", node);
+    
+    return node;
+}
+
+// Load the file of data which will used to build the tree into a memory buffer
+// and retrieve a pointer to it. In this case the data is expected to be a list
+// of words separated by '\n' (newline)
+
+// Linux system calls are used to open and read the contents of the file:
+
+// open(): https://man7.org/linux/man-pages/man2/open.2.html 
+// fstat(): https://man7.org/linux/man-pages/man2/fstat.2.html
+// read(): https://man7.org/linux/man-pages/man2/read.2.html
+
+// A pointer to the memory buffer where the data is stored is then returned.
+
 
 char* read_data_file(const char *dict_file) {
 
@@ -28,8 +77,13 @@ char* read_data_file(const char *dict_file) {
 
     cakelog("opened file %s", dict_file);
     
-    struct stat dict_stats;
+    // fstat() is used to get the size of the file in bytes. This value can then
+    // be passed to malloc() to allocate a block of memory the right size for
+    // storing contents of the whole file and used in the call to read() to load
+    // the entire file in at once
 
+    struct stat dict_stats;
+    
     if (fstat(dictionary_fd, &dict_stats) == -1) {
         cakelog("failed to get statistics for dictionary file");
         perror("fstat()");
@@ -40,9 +94,15 @@ char* read_data_file(const char *dict_file) {
 
     cakelog("file_size is %ld bytes", file_size);
 
+    // Increment the buffer size by 1 byte to make room for the NULL terminator
+    // which will be added once all the data has been loaded
+
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
      
+
+    // Now read the whole file into memory with one call to read().
+
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
         cakelog("unable to load file");
@@ -54,6 +114,8 @@ char* read_data_file(const char *dict_file) {
 
     close(dictionary_fd);
 
+    // Remember to slot on the NULL terminator ('\0')
+    
     buffer[file_size] = '\0';
 
     return buffer;
@@ -126,28 +188,7 @@ unsigned char* sha256(const char *data) {
 
 }
 
-struct Node {
-    struct Node * left;
-    struct Node * right;
-    char * sha256_digest;
-}; 
 
-typedef struct Node Node;
-
-Node* new_node(Node * left, Node * right, char * sha256_digest) {
-
-    cakelog("===== new_node() =====");
-    cakelog("left: %p, right: %p, hash: [%s]", left, right, sha256_digest);
-
-    Node * node = malloc(sizeof(Node));
-    node->left = left;
-    node->right = right;
-    node->sha256_digest = sha256_digest;
-
-    cakelog("returning new node at address %p", node);
-    
-    return node;
-}
 
 
 Node** build_leaves(char* buffer) {
