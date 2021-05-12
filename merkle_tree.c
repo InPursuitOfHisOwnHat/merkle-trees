@@ -78,9 +78,9 @@ char* read_data_file(const char *dict_file) {
     cakelog("opened file %s", dict_file);
     
     // fstat() is used to get the size of the file in bytes. This value can then
-    // be passed to malloc() to allocate a block of memory the right size for
-    // storing contents of the whole file and used in the call to read() to load
-    // the entire file in at once
+    // be passed to malloc() to request a block of memory large enought to store
+    // the whole file and then it can be used in the call to read() to load
+    // the entire file at once
 
     struct stat dict_stats;
     
@@ -100,7 +100,6 @@ char* read_data_file(const char *dict_file) {
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
      
-
     // Now read the whole file into memory with one call to read().
 
     ssize_t bytes_read;
@@ -156,10 +155,6 @@ long get_word_count(const char* data) {
 // converted into a standard char* of ASCII characters that can be passed to
 // 'printf()' or similar.
 
-// 'SHA256_DIGEST_LENGTH' is defined in the OpenSSL 'sha.h' header. At the time
-// of writing it is 32 which makes the final string representation 64 characters
-// long
-
 char* hexdigest(const unsigned char *hash) {
 
     cakelog("===== hexdigest() =====");
@@ -168,6 +163,10 @@ char* hexdigest(const unsigned char *hash) {
     // char* needs to be twice as large as the current unsigned char* so all the
     // hexadecimal digits can fit. Plus one is added for the NULL terminator
     // ('\0')
+
+    // 'SHA256_DIGEST_LENGTH' is defined in the OpenSSL 'sha.h' header. At the
+    // time of writing it is 32 which makes the final string representation 64
+    // characters long
 
     char *hexdigest = malloc((SHA256_DIGEST_LENGTH*2)+1);
 
