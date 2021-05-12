@@ -51,6 +51,7 @@ Node* new_node(Node * left, Node * right, char * sha256_digest) {
     return node;
 }
 
+
 // Load the file of data which will used to build the tree into a memory buffer
 // and retrieve a pointer to it. In this case the data is expected to be a list
 // of words separated by '\n' (newline)
@@ -62,7 +63,6 @@ Node* new_node(Node * left, Node * right, char * sha256_digest) {
 // read(): https://man7.org/linux/man-pages/man2/read.2.html
 
 // A pointer to the memory buffer where the data is stored is then returned.
-
 
 char* read_data_file(const char *dict_file) {
 
@@ -115,12 +115,17 @@ char* read_data_file(const char *dict_file) {
     close(dictionary_fd);
 
     // Remember to slot on the NULL terminator ('\0')
-    
+
     buffer[file_size] = '\0';
 
     return buffer;
     
 }
+
+
+// A simple function to count all the words in the data buffer. It simply scans
+// along the buffer one character at a time and increments a counter each time
+// it finds a newline (`\n`) character.
 
 long get_word_count(const char* data) {
 
@@ -133,6 +138,10 @@ long get_word_count(const char* data) {
          }
      }
 
+    // Need to increment the counter one last time because the last word in the
+    // buffer is followed by '\0' (NULL terminator), not '\n' so it wouldn't
+    // have been counted.
+
      word_count++;
 
      cakelog("returning word count of %ld", word_count);
@@ -140,15 +149,36 @@ long get_word_count(const char* data) {
      return word_count;
 }
 
+
+// The OpenSSL hash function returns hashes in the form of an unsigned char*
+// which is a set of 32 bytes that make up the hash-digest. In order to print
+// this out to a more familiar looking string of hexadecimal symbols it must be
+// converted into a standard char* of ASCII characters that can be passed to
+// 'printf()' or similar.
+
+// 'SHA256_DIGEST_LENGTH' is defined in the OpenSSL 'sha.h' header. At the time
+// of writing it is 32 which makes the final string representation 64 characters
+// long
+
 char* hexdigest(const unsigned char *hash) {
 
     cakelog("===== hexdigest() =====");
 
+    // Remember, a byte presented as hexadecimal is two characters so the new
+    // char* needs to be twice as large as the current unsigned char* so all the
+    // hexadecimal digits can fit. Plus one is added for the NULL terminator
+    // ('\0')
+
     char *hexdigest = malloc((SHA256_DIGEST_LENGTH*2)+1);
+
+    // A bit of pointer arithmetic is used to select the next empty space in the
+    // buffer and then the next two digits are added using 'sprintf()'.
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
 		sprintf(hexdigest + (i * 2), "%02x", hash[i]);
     }
+
+    // ...and the final NULL terminator
 
     hexdigest[64]='\0';
 
