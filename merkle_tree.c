@@ -474,6 +474,9 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
 // on each line, -d is a request to trace output to a file, and -f is to trace
 // output to a file but also force Cakelog to flush the file each time it's
 // written to (can add considerable processing time).
+//
+// The datafile should be a file of words or text separated by a newline
+// character. There are some examples in the ./test-data folder of this repo.
 
 int main(int argc, char *argv[]) {
 
