@@ -232,7 +232,6 @@ unsigned char* sha256(const char *data) {
 
 }
 
-
 // The sha256() hash function returns hashes straight from OpenSSL in the form
 // of an unsigned char*, a set of 32 bytes that make up the hash-digest. In
 // order to print this as the more familiar looking string of hexadecimal
@@ -270,14 +269,23 @@ char* hexdigest(const unsigned char *hash) {
     
 }
 
-
-
-
+// To start building the tree a list of Nodes is required to act at the bottom
+// layer, or leaves. This function scans the buffer of words read in during
+// 'read_data_file()' and adds them (or, rather, pointers to them) to new Node
+// objects. The leaves are returned as a chain of Node pointers ready to be
+// turned into a tree.
 
 Node** build_leaves(char* buffer) {
 
     cakelog("===== build_leaves() =====");
   
+    // Because the list of words in the test data is of fixed length and, thanks
+    // to the way they're separated, easy to count, enough memory to store all
+    // the Node pointers in the leaves can be pre-allocated with one call to
+    // malloc(). get_word_count() can be used to establish how may words there are
+    // in the data which will reveal how many Nodes are needed and, therefore,
+    // how much memory to allocate.
+
     long word_count = get_word_count(buffer);
     Node **leaves = malloc(sizeof(Node*)*word_count);
 
@@ -289,11 +297,26 @@ Node** build_leaves(char* buffer) {
 
     cakelog("beginning loop through buffer using strtok");
 
+    // Words are pulled out of the data buffer using strtok()
+    // (https://man7.org/linux/man-pages/man3/strtok.3.html) which splits a
+    // block of char data into it's component words (or tokens), according to
+    // the delimeters provided (in this case `\n` for each word and `\0` to get
+    // the last word in the buffer).
+
     char * word = strtok(buffer, "\n\0");
     
     while( word != NULL) {
 
         cakelog("next word is [%s]", word);
+
+        // A new node is built out of the word. To get the hash of each
+        // word the sha256() function is called which wraps calls to the OpenSSL
+        // library's own SHA256 hashing functions. This call is further wrapped
+        // by another call to hexdigest() to get the text representation of the
+        // hash digest.
+        //
+        // Left and right Nodes are assigned NULL because this is the bottom
+        // layer of the tree - there are no branches beneath it
 
         n = new_node(NULL, NULL, hexdigest(sha256(word)));
         leaves[index] = n;
@@ -307,7 +330,6 @@ Node** build_leaves(char* buffer) {
 
     return leaves;
 }
-
 
 // build_merkle_tree() builds our Merkle Tree recursively, layer by layer from
 // the bottom up. It returns a pointer to the 'Node' at the root of the tree.
@@ -383,9 +405,9 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
             cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest,  previous_layer[previous_layer_right_index], previous_layer[previous_layer_right_index]->sha256_digest);
             
             // The hash digests from the left and right nodes are concatenated
-            // into 'digest' ready tp be hashed.
+            // into 'digest' ready to be hashed.
             //
-            // Yes, there are far safer ways to do this, but shush.
+            // Yes, there are far safer ways to do this but come on, now, shush.
 
             strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
             strcat(digest, previous_layer[previous_layer_right_index]->sha256_digest);
@@ -405,8 +427,6 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
                          hexdigest(sha256(digest)));
 
         }
-
-
         else {
 
             // There is an odd number of Nodes and the final Node needs to be
@@ -437,9 +457,23 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
     }
     
     // The recursive call where the next layer becomes the previous layer
-    
+
     return build_merkle_tree(next_layer, next_layer_index);
 }
+
+// The program uses the Cakelog logger
+// (https://github.com/chris-j-akers/cakelog)) which outputs timestamped
+// information to a log file, but this is optional as logging slows the program
+// down, especially if flush is forced.
+//
+// Usage (assuming the executable is called 'mtree') is: 
+//
+//      mtree [-d|-f] <datafile>
+//
+// Where <datafile> is the name of an input file that contains a list of words
+// on each line, -d is a request to trace output to a file, and -f is to trace
+// output to a file but also force Cakelog to flush the file each time it's
+// written to (can add considerable processing time).
 
 int main(int argc, char *argv[]) {
 
