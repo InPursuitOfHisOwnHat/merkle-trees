@@ -7,15 +7,23 @@
 #include <sys/types.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <openssl/sha.h>
-#include <openssl/evp.h>
 #include <stdbool.h>
 #include <mcheck.h>
 #include <math.h>
 #include <getopt.h>
 
+// The OpenSSL library is used for the hashing functions. It needs to be
+// installed separately:
+//
+// https://www.howtoforge.com/tutorial/how-to-install-openssl-from-source-on-linux/
+
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+
 // The cakelog library (https://github.com/chris-j-akers/cakelog) is used to
-// write out a timestamped debug log.
+// write out a timestamped debug log. The cakelog.c file needs to be compiled
+// with any program that uses it along with the -lm switch to include the Maths
+// library
 
 #include "./cakelog/cakelog.h"
 
@@ -31,7 +39,6 @@ struct Node {
 }; 
 
 typedef struct Node Node;
-
 
 // A basic C-style constructor reduces clutter when creating Nodes as the tree
 // is being built.
@@ -51,9 +58,8 @@ Node* new_node(Node *left, Node *right, char *sha256_digest) {
     return node;
 }
 
-
-// Load the data which will used to build the tree. For this test program, the
-// data is expected to be a series of words separated by '\n' (newline)
+// Load the data used to populate the tree. For this test program, the
+// data is expected to be a series of words separated by an '\n' (newline)
 // character in a file. The folder /test-data contains some examples, including
 // a large 5MB file that contains the English dictionary.
 
@@ -63,7 +69,7 @@ Node* new_node(Node *left, Node *right, char *sha256_digest) {
 //      fstat(): https://man7.org/linux/man-pages/man2/fstat.2.html
 //      read(): https://man7.org/linux/man-pages/man2/read.2.html
 
-// A pointer to the memory buffer where the data is stored is then returned.
+// A pointer to the data is stored is then returned.
 
 char* read_data_file(const char *dict_file) {
 
@@ -123,10 +129,9 @@ char* read_data_file(const char *dict_file) {
     
 }
 
-
-// A simple function to count all the words in the data buffer. It simply scans
-// along the buffer one character at a time and increments a counter each time
-// it finds a newline ('\n') character.
+// A simple function to count all the words in the data buffer. It scans the
+// buffer one character at a time and increments a counter each time it finds a
+// newline ('\n') character.
 
 long get_word_count(const char* data) {
 
@@ -150,34 +155,25 @@ long get_word_count(const char* data) {
      return word_count;
 }
 
-
 // 'sha256()' generates a hash from the 'char*' provided in the 'buffer'
 // parameter and returns a new 'char*' pointing to that hash. It uses the
 // OpenSSL EVP (or Digital EnVeloPe) interface which provides a high-level way
 // to interact with the various hashing and cryptography functions provided by
 // the OpenSSL library. In order to use these functions, the library must first
 // be installed on the system and the following include directives added to the
-// relevant source file:
+// relevant source file (see above):
 //
 //      #include <openssl/sha.h>
 //      #include <openssl/evp.h>
 //
-// When compiling, the '-lssl' and '-lcrypto' switches must be used to ensure
-// the OpenSSL libraries are linked.
-
-
-// Finally, 'EVP_DigestFinal_ex()' takes the hash-result from our MDCTX and
-// copies it to our 'hash_digest' variable that was pre-allocated on line #19
-// (described above).
-
-// On line #24 we clear everything up ('EVP_MD_CTX_free') and then return 'hash_digest' back to the caller.
+// When compiling, the '-lssl' and '-lcrypto' switches must also be used to
+// link the OpenSSL libraries.
 
 unsigned char* sha256(const char *data) {
 
     cakelog("===== sha256() =====");
 
     unsigned int data_len = strlen(data);
-    unsigned char *hash_digest;
 
     // Declare an EnVeloPe Message Digest Context pointer 
 
@@ -197,7 +193,7 @@ unsigned char* sha256(const char *data) {
     // or EVP_sha512()) 
 
     EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
-    
+
     // Now pass the raw data to be hashed along with it's length to the
     // EVP_DigestUpdate() function. Note that this function can be called
     // multiple times, each time adding more data before retrieving the final
@@ -218,19 +214,24 @@ unsigned char* sha256(const char *data) {
     // in this way provide the size information required by 'OPENSSL_malloc()'.
 
     cakelog("initialising new hash_digest buffer");
-    hash_digest = OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
+    unsigned char* hash_digest = OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
     
-    
+    // Now copy the generated hash into the 'hash_digest' char* declared and
+    // initialised above.
 
     EVP_DigestFinal_ex(mdctx, hash_digest, &data_len);
     cakelog("succesfully copied new digest to hash_digest buffer");
     
+    // Use the free function provided by the EVP interface to free up the
+    // message digest context.
+
     EVP_MD_CTX_free(mdctx);
     cakelog("successfully freed mdctx digest");
 
     return hash_digest;
 
 }
+
 
 // The sha256() hash function returns hashes straight from OpenSSL in the form
 // of an unsigned char*, a set of 32 bytes that make up the hash-digest. In
@@ -244,12 +245,11 @@ char* hexdigest(const unsigned char *hash) {
 
     // A byte presented in hexadecimal is two characters, so the length of the
     // new char* needs to be twice as large as the current unsigned char*, but
-    // +1 for the NULL terminator ('\0')
+    // with an extra character to make room for the NULL terminator ('\0')
 
     // 'SHA256_DIGEST_LENGTH' is defined in the OpenSSL 'sha.h' header. At the
     // time of writing it is 32 which makes the final string representation 64
-    // characters long but, as always, an extra one is added to make room for
-    // the NULL terminator ('\0')
+    // characters long (65 with the NULL terminator ('\0')
 
     char *hexdigest = malloc((SHA256_DIGEST_LENGTH*2)+1);
 
@@ -269,7 +269,6 @@ char* hexdigest(const unsigned char *hash) {
     return hexdigest;
     
 }
-
 
 
 
@@ -309,9 +308,26 @@ Node** build_leaves(char* buffer) {
     return leaves;
 }
 
+
+// build_merkle_tree() builds our Merkle Tree recursively, layer by layer from
+// the bottom up. It returns a pointer to the 'Node' at the root of the tree.
+// This Node will contain the hash of the entire data-set.
+//
+// The 'previous_layer' parameter is a pointer-chain of 'Node' objects that are
+// used to build the next layer of nodes. The first time this function is
+// called, 'previous_layer' will contain the leaves, or bottom layer, of our
+// tree (see build_leaves() function)
+
+// The 'previous_layer_len' parameter contains the number of 'Node' pointers in
+// 'previous_layer'. This value is used to calculate the amount of memory needed
+// when allocating our new layer.
+
 Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
 
     cakelog("===== build_merkle_tree() =====");
+
+    // If the number of Nodes in the previous layer is just 1 then
+    // previous_layer is already at the root of the tree.
 
     if (previous_layer_len == 1) {
 
@@ -320,6 +336,21 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
         return previous_layer[0];
     }
    
+    // A Merkle Tree is also a Perfect Binary Tree
+    // (https://www.programiz.com/dsa/perfect-binary-tree) so, in theory, new
+    // layers should have half the number of nodes as their previous layer
+    // meaning dividing 'previous_layer_len' by 2 should get the right number of
+    // slots required for eah Node. A problem arises, though, if the previous
+    // layer has an odd number of nodes. In C, integer division rounds down
+    // (e.g. 5 / 2 = 1) but this time it needs to round up (if there is an odd
+    // number of Nodes in the previous layer, the last, orphaned Node is
+    // duplicated so that it can form both the left and right branches of the
+    // node above it). 
+    //
+    // The 'ceil()' function from the 'Math.h' library will round up integer
+    // division so it's now possible to allocate the correct amount of memory
+    // required for the number of Nodes in this layer.
+
     long next_layer_len = ceil(previous_layer_len/2.0);
     Node **next_layer = malloc(sizeof(Node*)*next_layer_len);
 
@@ -339,16 +370,35 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
 
         previous_layer_right_index = previous_layer_left_index + 1;
 
+        // If the previous layer has an odd number of Nodes then the
+        // final iteration of this while loop will only be able to pull out a valid
+        // left Node, there won't be a right node. With Merkle Trees, this means
+        // the left Node is duplicated and use for both the 'left' and 'right'
+        // branches of the Node (see the 'else' branch)
+
         if (previous_layer_right_index < previous_layer_len) {
 
             cakelog("both left node and right node available");
                        
             cakelog("left node addr: %p, left node hash: [%s], right node addr: %p, right node hash: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest,  previous_layer[previous_layer_right_index], previous_layer[previous_layer_right_index]->sha256_digest);
             
+            // The hash digests from the left and right nodes are concatenated
+            // into 'digest' ready tp be hashed.
+            //
+            // Yes, there are far safer ways to do this, but shush.
+
             strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
             strcat(digest, previous_layer[previous_layer_right_index]->sha256_digest);
 
             cakelog("concatenated digest is: %s", digest);
+
+            // New Node is created with calls to sha256() and hexidigest()
+            //
+            // A call to hexidigest is not strictly necessary at this point and
+            // is even inefficient, but this is a small experimental program and
+            // it's good to be able to observe things properly in the debug log.
+            // Ordinarily, this only needs to be done when the root node is
+            // being displayed
 
             n = new_node(previous_layer[previous_layer_left_index], 
                          previous_layer[previous_layer_right_index], 
@@ -356,12 +406,16 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
 
         }
 
+
         else {
-        
+
+            // There is an odd number of Nodes and the final Node needs to be
+            // duplicated, but otherwise the process is the same
+            
             cakelog("only have left node available");
             
             cakelog("left node addr: %p, left node digest: [%s]", previous_layer[previous_layer_left_index], previous_layer[previous_layer_left_index]->sha256_digest);
-                     
+
             strcpy(digest, previous_layer[previous_layer_left_index]->sha256_digest);
             strcat(digest, previous_layer[previous_layer_left_index]->sha256_digest);
 
@@ -372,13 +426,17 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
                          hexdigest(sha256(digest)));
         }
 
+        // Add the new Node to the next empty slot in the layer
+
         next_layer[next_layer_index] = n;
-        
+    
         cakelog("added node at address %p to next_layer with an index of %ld", n, next_layer_index);
-        
         next_layer_index++;
+
         previous_layer_left_index = previous_layer_right_index + 1;
     }
+    
+    // The recursive call where the next layer becomes the previous layer
     
     return build_merkle_tree(next_layer, next_layer_index);
 }
