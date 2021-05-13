@@ -256,7 +256,7 @@ char* hexdigest(const unsigned char *hash) {
     // buffer and then the next two digits are added using 'sprintf()'.
 
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-		sprintf(hexdigest + (i * 2), "%02x", hash[i]);
+        sprintf(hexdigest + (i * 2), "%02x", hash[i]);
     }
 
     // ...and the final NULL terminator
