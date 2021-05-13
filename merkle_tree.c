@@ -19,10 +19,10 @@
 
 #include "./cakelog/cakelog.h"
 
-// A tree is made up of Nodes, and a Node can be implemented as a basic struct.
-// Recursive `left` and `right` references to itself for the branches (or `NULL`
-// if a leaf) and a `char*` for the data which, in this case, is a 64-character
-// hash digest stored as a hexidecimal string.
+// A tree is made up of Nodes and a Node can be implemented as a basic struct.
+// The struct is made up of recursive 'left' and 'right' references to itself for
+// the branches (or 'NULL' if a leaf) and a 'char*' for the data which, in this
+// case, is a 64-character hash digest stored as a hexidecimal string.
 
 struct Node {
     struct Node * left;
@@ -36,7 +36,7 @@ typedef struct Node Node;
 // A basic C-style constructor reduces clutter when creating Nodes as the tree
 // is being built.
 
-Node* new_node(Node * left, Node * right, char * sha256_digest) {
+Node* new_node(Node *left, Node *right, char *sha256_digest) {
 
     cakelog("===== new_node() =====");
     cakelog("left: %p, right: %p, hash: [%s]", left, right, sha256_digest);
@@ -52,15 +52,16 @@ Node* new_node(Node * left, Node * right, char * sha256_digest) {
 }
 
 
-// Load the file of data which will used to build the tree into a memory buffer
-// and retrieve a pointer to it. In this case the data is expected to be a list
-// of words separated by '\n' (newline)
+// Load the data which will used to build the tree. For this test program, the
+// data is expected to be a series of words separated by '\n' (newline)
+// character in a file. The folder /test-data contains some examples, including
+// a large 5MB file that contains the English dictionary.
 
 // Linux system calls are used to open and read the contents of the file:
 
-// open(): https://man7.org/linux/man-pages/man2/open.2.html 
-// fstat(): https://man7.org/linux/man-pages/man2/fstat.2.html
-// read(): https://man7.org/linux/man-pages/man2/read.2.html
+//      open(): https://man7.org/linux/man-pages/man2/open.2.html 
+//      fstat(): https://man7.org/linux/man-pages/man2/fstat.2.html
+//      read(): https://man7.org/linux/man-pages/man2/read.2.html
 
 // A pointer to the memory buffer where the data is stored is then returned.
 
@@ -94,13 +95,14 @@ char* read_data_file(const char *dict_file) {
 
     cakelog("file_size is %ld bytes", file_size);
 
-    // Increment the buffer size by 1 byte to make room for the NULL terminator
-    // which will be added once all the data has been loaded
+    // Increment the buffer size by 1 to make room for the NULL terminator which
+    // will be added once all the data has been loaded
 
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
      
-    // Now read the whole file into memory with one call to read().
+    // Now read the whole file into memory with one call to read(). Any failure
+    // will result in the program aborting.
 
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
@@ -113,7 +115,7 @@ char* read_data_file(const char *dict_file) {
 
     close(dictionary_fd);
 
-    // Remember to slot on the NULL terminator ('\0')
+    // Add on the NULL terminator ('\0')
 
     buffer[file_size] = '\0';
 
@@ -124,7 +126,7 @@ char* read_data_file(const char *dict_file) {
 
 // A simple function to count all the words in the data buffer. It simply scans
 // along the buffer one character at a time and increments a counter each time
-// it finds a newline (`\n`) character.
+// it finds a newline ('\n') character.
 
 long get_word_count(const char* data) {
 
@@ -149,24 +151,105 @@ long get_word_count(const char* data) {
 }
 
 
-// The OpenSSL hash function returns hashes in the form of an unsigned char*
-// which is a set of 32 bytes that make up the hash-digest. In order to print
-// this out to a more familiar looking string of hexadecimal symbols it must be
-// converted into a standard char* of ASCII characters that can be passed to
+// 'sha256()' generates a hash from the 'char*' provided in the 'buffer'
+// parameter and returns a new 'char*' pointing to that hash. It uses the
+// OpenSSL EVP (or Digital EnVeloPe) interface which provides a high-level way
+// to interact with the various hashing and cryptography functions provided by
+// the OpenSSL library. In order to use these functions, the library must first
+// be installed on the system and the following include directives added to the
+// relevant source file:
+//
+//      #include <openssl/sha.h>
+//      #include <openssl/evp.h>
+//
+// When compiling, the '-lssl' and '-lcrypto' switches must be used to ensure
+// the OpenSSL libraries are linked.
+
+
+// Finally, 'EVP_DigestFinal_ex()' takes the hash-result from our MDCTX and
+// copies it to our 'hash_digest' variable that was pre-allocated on line #19
+// (described above).
+
+// On line #24 we clear everything up ('EVP_MD_CTX_free') and then return 'hash_digest' back to the caller.
+
+unsigned char* sha256(const char *data) {
+
+    cakelog("===== sha256() =====");
+
+    unsigned int data_len = strlen(data);
+    unsigned char *hash_digest;
+
+    // Declare an EnVeloPe Message Digest Context pointer 
+
+    EVP_MD_CTX *mdctx;
+
+    cakelog("initialising new mdctx");
+
+    // Allocate memory for 'mdctx' using the special allocation function provided by
+    // OpenSSL (not c's 'new').
+
+    mdctx = EVP_MD_CTX_new();
+
+    // Initialise 'mdctx' by setting it to use the OpenSSL EVP_sha256() function
+    // which is the type of hash used in this Merkle Tree. In theory,
+    // the 'EVP_sha256()' parameter, here, can be swapped out to use any other
+    // hashing function available in the OpenSSL EVP interface (e.g. EVP_md5()
+    // or EVP_sha512()) 
+
+    EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
+    
+    // Now pass the raw data to be hashed along with it's length to the
+    // EVP_DigestUpdate() function. Note that this function can be called
+    // multiple times, each time adding more data before retrieving the final
+    // hash. For instance, if the data to be hashed is being streamed from a
+    // socket and read in chunks, each chunk can be passed to this function
+    // until the end of the stream is reached. Here, the function is only called
+    // once because all the data needed is in the 'data' parameter.
+
+    cakelog("updating mdctx digest with data [%s]", data);
+    EVP_DigestUpdate(mdctx, data, data_len);
+    
+    // All the data has been gathered and entered. Now to allocate space for the
+    // hash itself. OpenSSL provides its own version of 'malloc()'. The
+    // 'EVP_sha256()' function passed to 'OPENSSL_malloc()' simply returns a
+    // SHA256 version of the 'EVP_MD' data-structure and the 'EVP_MD_size()'
+    // function wrapped around it returns the size of that data structure (a
+    // kind of 'sizeof' function). Obviously, then, both these functions called
+    // in this way provide the size information required by 'OPENSSL_malloc()'.
+
+    cakelog("initialising new hash_digest buffer");
+    hash_digest = OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
+    
+    
+
+    EVP_DigestFinal_ex(mdctx, hash_digest, &data_len);
+    cakelog("succesfully copied new digest to hash_digest buffer");
+    
+    EVP_MD_CTX_free(mdctx);
+    cakelog("successfully freed mdctx digest");
+
+    return hash_digest;
+
+}
+
+// The sha256() hash function returns hashes straight from OpenSSL in the form
+// of an unsigned char*, a set of 32 bytes that make up the hash-digest. In
+// order to print this as the more familiar looking string of hexadecimal
+// symbols it must be converted to a standard char* that can be passed to
 // 'printf()' or similar.
 
 char* hexdigest(const unsigned char *hash) {
 
     cakelog("===== hexdigest() =====");
 
-    // Remember, a byte presented as hexadecimal is two characters so the new
-    // char* needs to be twice as large as the current unsigned char* so all the
-    // hexadecimal digits can fit. Plus one is added for the NULL terminator
-    // ('\0')
+    // A byte presented in hexadecimal is two characters, so the length of the
+    // new char* needs to be twice as large as the current unsigned char*, but
+    // +1 for the NULL terminator ('\0')
 
     // 'SHA256_DIGEST_LENGTH' is defined in the OpenSSL 'sha.h' header. At the
     // time of writing it is 32 which makes the final string representation 64
-    // characters long
+    // characters long but, as always, an extra one is added to make room for
+    // the NULL terminator ('\0')
 
     char *hexdigest = malloc((SHA256_DIGEST_LENGTH*2)+1);
 
@@ -187,35 +270,7 @@ char* hexdigest(const unsigned char *hash) {
     
 }
 
-unsigned char* sha256(const char *data) {
 
-    cakelog("===== sha256() =====");
-
-    unsigned int data_len = strlen(data);
-    unsigned char *hash_digest;
-
-    EVP_MD_CTX *mdctx;
-
-    cakelog("initialising new mdctx");
-
-    mdctx = EVP_MD_CTX_new();
-    EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
-    
-    cakelog("updating mdctx digest with data [%s]", data);
-    EVP_DigestUpdate(mdctx, data, data_len);
-    
-    cakelog("initialising new hash_digest buffer");
-    hash_digest = OPENSSL_malloc(EVP_MD_size(EVP_sha256()));
-    
-    EVP_DigestFinal_ex(mdctx, hash_digest, &data_len);
-    cakelog("succesfully copied new digest to hash_digest buffer");
-    
-    EVP_MD_CTX_free(mdctx);
-    cakelog("successfully freed mdctx digest");
-
-    return hash_digest;
-
-}
 
 
 
