@@ -1,5 +1,6 @@
 merkle_tree_no_comments.c
 .vscode/launch.json
 .vscode/tasks.json
+./vscode/settings.json
 a.out
 mtree
