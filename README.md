@@ -44,7 +44,7 @@ This repo contains a basic implementation of a Merkle Tree written in C which us
 | ARTIFACT  | DESCRIPTION  |
 |---|---|
 | `./cakelog/`  | Source for the logger used to output debug information [https://github.com/chris-j-akers/cakelog](https://github.com/chris-j-akers/cakelog). Needs to be compiled with `merkle_tree.c`   |
-| `./test_data/`  | Contains a sample test data file of english words, as described above.  |
+| `./test-data/`  | Contains a sample test data file of english words, as described above.  |
 | `merkle_tree.c`  | Source  |
 | `README.md`  | This README file  |
 |  `./README.md_img/` | Accompanying images for this file  |
@@ -65,13 +65,13 @@ To generate an executable called `mtree`, execute the following command from the
 
 Once the program has compiled to get the root has of the example data set (466,549 words) execute:
 
-`➜ ./mtree ./test_data/ukenglish.txt`
+`➜ ./mtree ./test-data/ukenglish.txt`
 
 The following output should be displayed:
 
 ```
-➜ ./mtree ./test_data/ukenglish.txt
-reading file ./test_data/ukenglish.txt
+➜ ./mtree ./test-data/ukenglish.txt
+reading file ./test-data/ukenglish.txt
 read 466550 words into buffer
 building leaves...
 building tree ...
@@ -115,8 +115,8 @@ Even the tiniest difference in the data will result in a vastly different root h
 Now, re-running the program the root hash has changed considerably:
 
 ```
-➜ ./mtree ./test_data/ukenglish.txt
-reading file ./test_data/ukenglish.txt
+➜ ./mtree ./test-data/ukenglish.txt
+reading file ./test-data/ukenglish.txt
 read 466549 words into buffer
 building leaves...
 building tree ...
@@ -150,8 +150,8 @@ In-fact, even just a single letter changed somewhere in the original file will r
 ![](README.md_img/Fis.png)
 
 ```
-➜ ./mtree ./test_data/ukenglish.txt
-reading file ./test_data/ukenglish.txt
+➜ ./mtree ./test-data/ukenglish.txt
+reading file ./test-data/ukenglish.txt
 read 466550 words into buffer
 building leaves...
 building tree ...
@@ -183,8 +183,8 @@ Root digest is: 504bb987a3501c5581a910a7a99ad300441da8ce301e0e0a93361fa65e20f9dd
 ...and, finally, when everything is put back together.
 
 ```
-➜ ./mtree ./test_data/ukenglish.txt
-reading file ./test_data/ukenglish.txt
+➜ ./mtree ./test-data/ukenglish.txt
+reading file ./test-data/ukenglish.txt
 read 466550 words into buffer
 building leaves...
 building tree ...
