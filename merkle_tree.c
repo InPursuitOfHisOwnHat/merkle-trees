@@ -29,13 +29,13 @@
 
 // A tree is made up of Nodes and a Node can be implemented as a basic struct.
 // The struct is made up of recursive 'left' and 'right' references to itself for
-// the branches (or 'NULL' if a leaf) and a 'char*' for the data which, in this
-// case, is a 64-character hash digest stored as a hexidecimal string.
+// the branches (or 'NULL' if a leaf) and a char* for the data which, in this
+// case, is a 64-character hash digest represented as a hexidecimal string.
 
 struct Node {
-    struct Node * left;
-    struct Node * right;
-    char * sha256_digest;
+    struct Node *left;
+    struct Node *right;
+    char *sha256_digest;
 }; 
 
 typedef struct Node Node;
@@ -48,7 +48,7 @@ Node* new_node(Node *left, Node *right, char *sha256_digest) {
     cakelog("===== new_node() =====");
     cakelog("left: %p, right: %p, hash: [%s]", left, right, sha256_digest);
 
-    Node * node = malloc(sizeof(Node));
+    Node *node = malloc(sizeof(Node));
     node->left = left;
     node->right = right;
     node->sha256_digest = sha256_digest;
@@ -58,18 +58,18 @@ Node* new_node(Node *left, Node *right, char *sha256_digest) {
     return node;
 }
 
-// Load the data used to populate the tree. For this test program, the
-// data is expected to be a series of words separated by an '\n' (newline)
-// character in a file. The folder /test-data contains some examples, including
-// a large 5MB file that contains the English dictionary.
-
+// Load the data used to populate the tree into a memory buffer. For this test
+// program, the data is a file containing a series of words separated by an '\n'
+// (newline) character. The folder test-data/ in this repo contains an example,
+// 5MB file of all words in the English dictionary.
+//
 // Linux system calls are used to open and read the contents of the file:
-
+//
 //      open(): https://man7.org/linux/man-pages/man2/open.2.html 
 //      fstat(): https://man7.org/linux/man-pages/man2/fstat.2.html
 //      read(): https://man7.org/linux/man-pages/man2/read.2.html
-
-// A pointer to the data is stored is then returned.
+//
+// A pointer to the data in memory is returned.
 
 char* read_data_file(const char *dict_file) {
 
@@ -131,7 +131,8 @@ char* read_data_file(const char *dict_file) {
 
 // A simple function to count all the words in the data buffer. It scans the
 // buffer one character at a time and increments a counter each time it finds a
-// newline ('\n') character.
+// newline ('\n') character. This function is used in build_leaves() to
+// calculate how much memory should be allocated for the list of leaves.
 
 long get_word_count(const char* data) {
 
@@ -155,19 +156,19 @@ long get_word_count(const char* data) {
      return word_count;
 }
 
-// 'sha256()' generates a hash from the 'char*' provided in the 'buffer'
-// parameter and returns a new 'char*' pointing to that hash. It uses the
-// OpenSSL EVP (or Digital EnVeloPe) interface which provides a high-level way
-// to interact with the various hashing and cryptography functions provided by
-// the OpenSSL library. In order to use these functions, the library must first
-// be installed on the system and the following include directives added to the
-// relevant source file (see above):
+// The sha256() function  generates a hash from the 'char*' provided in the
+// 'buffer' parameter and returns a new 'char*' pointing to that hash. It uses
+// the OpenSSL EVP (or Digital EnVeloPe) interface which provides a high-level
+// way to interact with the various hashing and cryptography functions provided
+// by the OpenSSL library. In order to use these functions, the library must
+// first be installed on the system and the following include directives added
+// to the relevant source file (see above):
 //
 //      #include <openssl/sha.h>
 //      #include <openssl/evp.h>
 //
-// When compiling, the '-lssl' and '-lcrypto' switches must also be used to
-// link the OpenSSL libraries.
+// When compiling, the '-lssl' and '-lcrypto' switches must also be used to link
+// the OpenSSL libraries.
 
 unsigned char* sha256(const char *data) {
 
@@ -175,7 +176,7 @@ unsigned char* sha256(const char *data) {
 
     unsigned int data_len = strlen(data);
 
-    // Declare an EnVeloPe Message Digest Context pointer 
+    // Declare an EnVeloPe Message Digest Context pointer called 'mdctx'.
 
     EVP_MD_CTX *mdctx;
 
@@ -199,8 +200,8 @@ unsigned char* sha256(const char *data) {
     // multiple times, each time adding more data before retrieving the final
     // hash. For instance, if the data to be hashed is being streamed from a
     // socket and read in chunks, each chunk can be passed to this function
-    // until the end of the stream is reached. Here, the function is only called
-    // once because all the data needed is in the 'data' parameter.
+    // until the end of the stream is reached. Here, however, the function is
+    // only called once because all the data can be copied in at once
 
     cakelog("updating mdctx digest with data [%s]", data);
     EVP_DigestUpdate(mdctx, data, data_len);
