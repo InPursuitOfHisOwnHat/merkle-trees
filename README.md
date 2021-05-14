@@ -1,10 +1,11 @@
 # Merkle Trees in C
 
+---
+
 - [Merkle Trees in C](#merkle-trees-in-c)
   - [Introduction](#introduction)
+  - [Building a Merkle Tree](#building-a-merkle-tree)
   - [Merkle Trees](#merkle-trees)
-    - [Building a Merkle Tree](#building-a-merkle-tree)
-    - [Why Merkle Trees?](#why-merkle-trees)
   - [Running mtree](#running-mtree)
   - [Changing the Data](#changing-the-data)
   - [How Does it Work?](#how-does-it-work)
@@ -14,48 +15,30 @@
 ---
 ## Introduction
 
-There's plenty of detailed information about Merkle Trees all over the interwebs and it's not going to be regurgitated, here. A simple online search will turn up any number of articles with varying levels of detail (and, frankly, quality). As usual, [Wikipedia](https://en.wikipedia.org/wiki/Merkle_tree) is as good a place to start as any. 
+There's plenty of detailed information about Merkle Trees all over the interwebs and it's not going to be regurgitated, here. A simple online search will turn up any number of articles with varying levels of detail (and, frankly, quality). As usual, [Wikipedia](https://en.wikipedia.org/wiki/Merkle_tree) is as good a place to start as any. There's also a particularly good one by Marc Clifton at [The Code Project](https://www.codeproject.com/Articles/1176140/Understanding-Merkle-Trees-Why-use-them-who-uses-t).
 
-The problem Merkle Trees try to solve is that of data integrity. Imagine a large dataset maintained by multiple, decentralised parties who each store their own copy. They must all make sure they have exactly the same copy. How?
+Broadly, the problem Merkle Trees try to solve is that of data integrity and consistency. Imagine a large dataset maintained by multiple, untrusting, decentralised parties who each store their own version. All these versions must remain in sync. How?
 
-One solution is for each party to constantly receive copies of everyone else's dataset and run byte-by-byte comparisons against their own. Obviously, though, this is horrifically inefficient. The bandwidth costs alone make this solution prohibitive.
+One solution is for each party to constantly receive copies of everyone else's dataset and run byte-by-byte comparisons against their own. Obviously, though, this is horrifically inefficient. The bandwidth costs alone can make this solution prohibitive. They could mitigate this by agreeing to do run a synchronisation just once per day or once per month, but what if this isn't frequent enough? What if the application the parties are serving requires near real-time consistency?
 
-A more practical way is for a hashing algorithm to be run against each dataset and the resulting digest sent to each party for comparison. This will be a much smaller value (for instance, the SHA256 hashing algorithm is just 32-bytes in size). If one party has computed a different hash from their dataset when compared to another party, clearly they are out of sync and work must be done to remediate.
+A more practical way is for a hashing algorithm to be run against each dataset and the resulting digest sent to every party for comparison. This will be a much smaller value (for instance, the SHA256 hashing algorithm is just 32-bytes in size). If one party has computed a different hash from their dataset when compared to another party, clearly they are out of sync and work must be done to remediate.
 
+There is still one problem, though. While parties are better off with this solution because datasets with matching hash values need no work at all, for hash values that don't match, large amounts of bandwidth and processor time are still being used to locate and patch differences in datasets. All a mismatched hash does is tell a party there is a problem **somewhere** in their data. They've still got to scan it all to find it. This is a waste if the differences are tiny.
 
+The next stage, then, is to split the dataset into blocks and compute a hash value for each block. Now, every party has a list of hashes to compare and it only needs to re-synchronise blocks where the hash comparisons fail. There are still multiple hashes flying around the system, though, and while it's, no doubt, faster, parties must maintain lists of which hashes represent which blocks and maintain these lists.
 
+So, the final step? A Merkle Tree.
 
-Note that, this exercise does not particularly care what happens
+## Building a Merkle Tree
 
+A list of blocks and their associated hashes have been prepared. The hashes are extracted into a list which forms the bottom layer, or leaves, of the Merkle Tree. The list is then split into pairs of hashes and the left and right hashes are concatenated, then hashed again. These new hashes form the next layer up of the tree. This process continues until there is only one hash left, known as the root hash.
 
+For any layer with an odd number of hashes (that is, a layer that cannot be split into left and right pairs evenly), the last hash is duplicated and used as the right hand hash pair.
 
- If compared to  compared can be run against the entire dataset and resulting digest can be compared with the hash digests of the other datasets. If they are the same, then no action is required. If they are different, then the parties can work together to plug the differences.
-
-There is still one further problem, though. What if the dataset is particularly big? In order to bring 
-
-
-
-
-This is a fairly basic implementation of a Merkle Tree in C using the words in a plain-text English dictionary file as data-blocks. Frankly, why anyone would want to do this in real-life ... well, you got me, but using this list of words instead of actual blocks of binary data, which I'd have to generate or fake, means 1) I have a ready-made, easily accessible and meaty set of data-blocks using little to no effort (over 450,000 words in my file, so 450,000 blocks) and 2) it's easy to watch what the program is doing with only a debugger, an online hash function and plenty of logging. The purpose of this exercise is as a self-learning tool to deep-dive the structure of a Merkle Tree and the mechanism for building it. The data is not important.
+---
 
 ## Merkle Trees
 
-
-I'm not going to regurgitate a lot of this material here, but I will talk about how a Merkle Tree is constructed and why they're a good idea for data verification.
-
-### Building a Merkle Tree
-
-To build a Merkle Tree a dataset must be split into blocks and a hash function run against each of those blocks. The resulting hash digests are stored in a list of nodes that form the bottom layer, or leaves, of the Merkle Tree. This layer is split into pairs of nodes and the hash digests stored in each left and right pair concatenated. The result of the two concatenated values is hashed again, and this hash forms the hash digest of the node in the layer above, and in between, the concatenated pair. 
-
-For a layer with an odd number of nodes (that is, a layer that cannot be split into left and right pairs evenly), the last node is duplicated and used as the right hand node of the final pair.
-
-Each layer of the tree is built in this way until there’s only one node left - the root node. The data in this root node contains the hash digest of the entire tree and acts as a kind of fingerprint for all the data in that tree.
-
-### Why Merkle Trees?
-
-Imagine a large dataset being maintained by multiple parties and each party must make sure that it has exactly the same copy of this dataset. We *could* get each party to run a byte-by-byte comparison against everyone else's dataset, but this would be time consuming and inefficient, especially if the dataset is liable to change frequently.
-
-Instead, each party builds a Merkle Tree out of their own version of the dataset, takes the 32-byte hash (or even the 64-byte hexadecimal string) from the root of their Merkle Tree and compares this root hash digest with everyone else's. Much smaller, much faster, less complicated. Any differences at all in the dataset, no matter how minor, will result in a very different root hash digest. Something I'm going to prove when I run `mtree`, below.
 
 ## Running mtree
 
