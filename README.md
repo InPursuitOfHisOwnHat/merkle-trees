@@ -21,11 +21,11 @@ A more practical way is for a hashing algorithm to be run against each dataset a
 
 There is still a problem, though. While parties are better off with this solution because datasets with matching hash values need no work at all, for hash values that don't match, large amounts of bandwidth and processor time are still being used to locate and patch differences in datasets. All a mismatched hash does is tell a party there is a problem **somewhere** in their data. They've still got to run a comparison until the mismatch is found.
 
-The next stage, then, is to split the dataset into blocks and compute a hash value for each block. Now, every party has a list of hashes to compare and it only needs to re-synchronise blocks where the hash comparisons fail. There are still multiple hashes flying around the system, though, and while it's, no doubt, faster, parties must maintain lists of which hashes represent which blocks and maintain these lists.
+The next stage, then, is to split the dataset into blocks and compute a hash value for each block. Now, every party has a list of hashes to compare and it only needs to re-synchronise blocks where the hash comparisons fail. There are still multiple hashes flying around the system, though, and while it's, no doubt, faster, parties must maintain lists of which hashes represent which blocks.
 
 So, the final step? A Merkle Tree.
 
-A list of blocks and their associated hashes have been prepared. The hashes are extracted into a list which forms the bottom layer, or leaves, of the Merkle Tree. The list is then split into pairs of hashes and the left and right hashes each pair are concatenated, then hashed again. These new hashes form the next layer up of the tree. This process continues until there is only one hash left, known as the root hash.
+A list of blocks and their associated hashes are generated, as described above. The hashes are extracted into a list which forms the bottom layer, or leaves, of the Merkle Tree which is then built upward, layer by layer. The hash list is split into pairs of hashes and the left and right hashes of each pair are concatenated, then hashed again. These new hashes form nodes in the next layer of the tree. This process continues until there is only one hash left, known as the root hash.
 
 For any layer with an odd number of hashes (that is, a layer that cannot be split into left and right pairs evenly), the last hash is duplicated and used as the right hand hash.
 
