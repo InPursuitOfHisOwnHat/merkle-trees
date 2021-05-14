@@ -2,13 +2,12 @@
 
 ---
 
-- [Merkle Trees in C](#merkle-trees-in-c)
-  - [Introduction](#introduction)
-  - [Repo Description](#repo-description)
-    - [Repo Contents](#repo-contents)
-  - [Building `merkle_tree.c`](#building-merkle_treec)
-  - [Program Usage](#program-usage)
-  - [Playing Around](#playing-around)
+- [Introduction](#introduction)
+- [Repo Description](#repo-description)
+  - [Repo Contents](#repo-contents)
+- [Building `merkle_tree.c`](#building-merkle_treec)
+- [Program Usage](#program-usage)
+- [Playing Around](#playing-around)
 
 ---
 ## Introduction
@@ -50,6 +49,8 @@ This repo contains a basic implementation of a Merkle Tree written in C which us
 | `merkle_tree.c`  | Source  |
 | `README.md`  | This README file  |
 |  `./README.md_img/` | Accompanying images for this file  |
+
+---
 
 ## Building `merkle_tree.c`
 
