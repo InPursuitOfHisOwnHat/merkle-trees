@@ -502,14 +502,25 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
 
+    printf("reading file %s\n", argv[optind]);
+
     char *words = read_data_file(argv[optind]);
     long word_count = get_word_count(words);
 
-    printf("building leaves\n");
+    printf("read %ld words into buffer\n", word_count);
+
+    printf("building leaves...\n");
 
     Node **leaves = build_leaves(words);
+
+    printf("building tree ...\n");
     Node *root = build_merkle_tree(leaves, word_count);
+
+    // Finally
+    printf("\n");
+    printf("================================================================================\n");
     printf("Root digest is: %s\n", root->sha256_digest);
+    printf("================================================================================\n");
 
     cakelog_stop();
 
