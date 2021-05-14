@@ -63,7 +63,7 @@ To generate an executable called `mtree`, execute the following command from the
 
 ## Program Usage
 
-Once the program has compiled to get the root has of the example data set (466,549 words) execute:
+Once the program has compiled to get the root hash of the example data set (466,549 words) execute:
 
 `➜ ./mtree ./test-data/ukenglish.txt`
 
