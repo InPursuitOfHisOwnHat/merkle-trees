@@ -37,7 +37,11 @@ The root hash is then sent around the system and compared with every other party
 ---
 ## What's in this Repo?
 
-This repo contains a basic implementation of a Merkle Tree written in C which uses files of words, separated by newline, as input. Quite why anybody would want to do such a thing in real-life is beyond me (maybe multiple parties on a system need to keep an English dictionary in sync for some reason!) but it means that it's easy to get hold of a sizeable chunk of test data in a simple format by downloading one of the many available text files out there that contain the English dictionary. One can be found in this repo by looking in the `./test-data` directory. It was downloaded from: [https://github.com/dwyl/english-words](https://github.com/dwyl/english-words).
+This repo contains a basic implementation of a Merkle Tree written in C.
+
+The tree is built out of a file of newline ('\n') separated words. It may seem an unrealistic dataset, but this is just an exercise - building the tree correctly is the focus - and such test data means 1) Logging information about the Merkle Tree being built from English words instead of chunks of binary data blocks means it's far easier to see what's going on when reviewing the logs, and 2) it's simple to procure a sizeable chunk of such test data in a simple format because there are are a few places out there that provide English dictionary text files intended for building spell-checkers. 
+
+In the `./test-data` directory of this repo there is a 5MB file of 499,550 newline-separated words providing a healthy test dataset of 499,550 blocks or leaves. It was downloaded from: [https://github.com/dwyl/english-words](https://github.com/dwyl/english-words).
 
 ### Repo Contents
 
