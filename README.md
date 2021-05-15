@@ -216,5 +216,3 @@ allocated space for 1 node pointers in next_layer at address 0x558de556f840
 Root digest is: bc4550eaefb5c8cc2ea917f3533b1e4635ffa232555de1d80f82634514223a35
 ================================================================================
 ```
-
-So, this is the power of Merkle Trees. No matter how big the dataset, it can reduced to a fingerprint, a single hash value which can be used to compare with other datasets to verify if they are identical.
