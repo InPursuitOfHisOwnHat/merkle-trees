@@ -23,14 +23,15 @@
 // The cakelog library (https://github.com/chris-j-akers/cakelog) is used to
 // write out a timestamped debug log. The cakelog.c file needs to be compiled
 // with any program that uses it along with the -lm switch to include the Maths
-// library
+// library.
 
 #include "./cakelog/cakelog.h"
 
 // A tree is made up of Nodes and a Node can be implemented as a basic struct.
-// The struct is made up of recursive 'left' and 'right' references to itself for
-// the branches (or 'NULL' if a leaf) and a char* for the data which, in this
-// case, is a 64-character hash digest represented as a hexidecimal string.
+// The struct is made up of recursive 'left' and 'right' references to itself
+// for the branches (or 'NULL' if a leaf) and a char* for the data which, in
+// this case, will be a 64-character hash digest represented as a hexidecimal
+// string.
 
 struct Node {
     struct Node *left;
@@ -58,16 +59,18 @@ Node* new_node(Node *left, Node *right, char *sha256_digest) {
     return node;
 }
 
-// Load the data used to populate the tree into a memory buffer. For this test
-// program, the data is a file containing a series of words separated by an '\n'
-// (newline) character. The folder test-data/ in this repo contains an example,
-// 5MB file of all words in the English dictionary.
+// read_data_file() loads the data used to populate the tree into a memory
+// buffer. For this test program, the data is a file containing a series of
+// words separated by an '\n' (newline) character. The folder test-data/ in this
+// repo contains an example, 5MB file of all words in the English dictionary.
 //
 // Linux system calls are used to open and read the contents of the file:
 //
 //      open(): https://man7.org/linux/man-pages/man2/open.2.html 
 //      fstat(): https://man7.org/linux/man-pages/man2/fstat.2.html
 //      read(): https://man7.org/linux/man-pages/man2/read.2.html
+//
+// Note that any failures to these calls results in the program aborting.
 //
 // A pointer to the data in memory is returned.
 
@@ -85,9 +88,9 @@ char* read_data_file(const char *dict_file) {
     cakelog("opened file %s", dict_file);
     
     // fstat() is used to get the size of the file in bytes. This value can then
-    // be passed to malloc() to request a block of memory large enought to store
-    // the whole file and then it can be used in the call to read() to load
-    // the entire file at once
+    // be passed to malloc() to request a block of memory large enough to store
+    // the whole file. The file size can also be used in the call to read() to
+    // load the entire file in at once.
 
     struct stat dict_stats;
     
@@ -102,13 +105,12 @@ char* read_data_file(const char *dict_file) {
     cakelog("file_size is %ld bytes", file_size);
 
     // Increment the buffer size by 1 to make room for the NULL terminator which
-    // will be added once all the data has been loaded
+    // will be added once all the data has been loaded.
 
     const long buffer_size = file_size + 1;
     char* buffer = malloc(buffer_size);
      
-    // Now read the whole file into memory with one call to read(). Any failure
-    // will result in the program aborting.
+    // Now read the whole file into memory with one call to read().
 
     ssize_t bytes_read;
     if((bytes_read = read(dictionary_fd, buffer, file_size)) != file_size) {
@@ -127,33 +129,6 @@ char* read_data_file(const char *dict_file) {
 
     return buffer;
     
-}
-
-// A simple function to count all the words in the data buffer. It scans the
-// buffer one character at a time and increments a counter each time it finds a
-// newline ('\n') character. This function is used in build_leaves() to
-// calculate how much memory should be allocated for the list of leaves.
-
-long get_word_count(const char* data) {
-
-    cakelog("===== get_word_count() =====");
-
-    long word_count = 0;
-    for (int i=0; data[i] != '\0'; i++) {
-         if (data[i] == '\n') {
-             word_count++;
-         }
-     }
-
-    // Need to increment the counter one last time because the last word in the
-    // buffer is followed by '\0' (NULL terminator), not '\n' so it wouldn't
-    // have been counted.
-
-     word_count++;
-
-     cakelog("returning word count of %ld", word_count);
-     
-     return word_count;
 }
 
 // The sha256() function  generates a hash from the 'char*' provided in the
@@ -198,16 +173,17 @@ unsigned char* sha256(const char *data) {
     // Now pass the raw data to be hashed along with it's length to the
     // EVP_DigestUpdate() function. Note that this function can be called
     // multiple times, each time adding more data before retrieving the final
-    // hash. For instance, if the data to be hashed is being streamed from a
-    // socket and read in chunks, each chunk can be passed to this function
-    // until the end of the stream is reached. Here, however, the function is
-    // only called once because all the data can be copied in at once
+    // hash. For instance, if the data to be hashed is being streamed data can
+    // be continuously passed to this function until the end of the stream is
+    // reached. Here, however, the function is only called once because all the
+    // data is available in the 'data' parameter.
 
     cakelog("updating mdctx digest with data [%s]", data);
     EVP_DigestUpdate(mdctx, data, data_len);
     
-    // All the data has been gathered and entered. Now to allocate space for the
-    // hash itself. OpenSSL provides its own version of 'malloc()'. The
+    // Next to allocate space for the digest itself.
+    //
+    // OpenSSL provides its own version of 'malloc()' which is used, here. The
     // 'EVP_sha256()' function passed to 'OPENSSL_malloc()' simply returns a
     // SHA256 version of the 'EVP_MD' data-structure and the 'EVP_MD_size()'
     // function wrapped around it returns the size of that data structure (a
@@ -233,11 +209,16 @@ unsigned char* sha256(const char *data) {
 
 }
 
-// The sha256() hash function returns hashes straight from OpenSSL in the form
-// of an unsigned char*, a set of 32 bytes that make up the hash-digest. In
-// order to print this as the more familiar looking string of hexadecimal
-// symbols it must be converted to a standard char* that can be passed to
-// 'printf()' or similar.
+// hexidigest() is required because the sha256() hash function returns hashes
+// straight from OpenSSL in the form of an unsigned char*, a set of 32 bytes
+// that make up the hash-digest. In order to print this as the more familiar
+// looking string of hexadecimal symbols it must be converted to a standard
+// char* that can be passed to 'printf()' or similar.
+//
+// Strictly speaking, this is only required when the hash is being printed out
+// but, in this program, hash digests are all converted to 64 character strings
+// before being added to each tree node. This is to make it easier to track
+// what's happening through debug logs.
 
 char* hexdigest(const unsigned char *hash) {
 
@@ -270,7 +251,33 @@ char* hexdigest(const unsigned char *hash) {
     
 }
 
-// To start building the tree a list of Nodes is required to act at the bottom
+// A simple function to count all the words in the data buffer. It scans the
+// buffer one character at a time and increments a counter each time it finds a
+// newline ('\n') character. This function is used in build_leaves() to
+// calculate how much memory should be allocated for the list of leaves.
+
+long get_word_count(const char* data) {
+
+    cakelog("===== get_word_count() =====");
+
+    long word_count = 0;
+    for (int i=0; data[i] != '\0'; i++) {
+         if (data[i] == '\n') {
+             word_count++;
+         }
+     }
+
+    // Need to increment the counter one last time because the last word in the
+    // buffer is followed by '\0' (NULL terminator), not '\n'.
+
+     word_count++;
+
+     cakelog("returning word count of %ld", word_count);
+     
+     return word_count;
+}
+
+// To start building the tree a list of Nodes is required to act as the bottom
 // layer, or leaves. This function scans the buffer of words read in during
 // 'read_data_file()' and adds them (or, rather, pointers to them) to new Node
 // objects. The leaves are returned as a chain of Node pointers ready to be
@@ -339,7 +346,7 @@ Node** build_leaves(char* buffer) {
 // The 'previous_layer' parameter is a pointer-chain of 'Node' objects that are
 // used to build the next layer of nodes. The first time this function is
 // called, 'previous_layer' will contain the leaves, or bottom layer, of our
-// tree (see build_leaves() function)
+// tree (see build_leaves() function).
 
 // The 'previous_layer_len' parameter contains the number of 'Node' pointers in
 // 'previous_layer'. This value is used to calculate the amount of memory needed
@@ -364,13 +371,13 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
     // layers should have half the number of nodes as their previous layer
     // meaning dividing 'previous_layer_len' by 2 should get the right number of
     // slots required for eah Node. A problem arises, though, if the previous
-    // layer has an odd number of nodes. In C, integer division rounds down
-    // (e.g. 5 / 2 = 1) but this time it needs to round up (if there is an odd
-    // number of Nodes in the previous layer, the last, orphaned Node is
-    // duplicated so that it can form both the left and right branches of the
-    // node above it). 
+    // layer has an odd number of nodes. In C, integer division is possible but
+    // it always rounds down by default (e.g. 5 / 2 = 1). For this program it
+    // needs to round up (if there is an odd number of Nodes in the previous
+    // layer, the last, orphaned Node is duplicated so that it can form both the
+    // left and right branches of the node above it). 
     //
-    // The 'ceil()' function from the 'Math.h' library will round up integer
+    // The 'ceil()' function from the 'Math.h' library rounds up integer
     // division so it's now possible to allocate the correct amount of memory
     // required for the number of Nodes in this layer.
 
@@ -462,7 +469,7 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
     return build_merkle_tree(next_layer, next_layer_index);
 }
 
-// The program uses the Cakelog logger
+// The program uses the cakelog logger
 // (https://github.com/chris-j-akers/cakelog)) which outputs timestamped
 // information to a log file, but this is optional as logging slows the program
 // down, especially if flush is forced.
