@@ -506,7 +506,7 @@ int main(int argc, char *argv[]) {
     }
 
 	if (optind >= argc) {
-		printf("Missing filename (Usage: %s [-d] <datafile>\n", argv[0]);
+		printf("Missing filename\nUsage: %s [-d|-df] <datafile>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 
