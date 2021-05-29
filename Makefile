@@ -8,7 +8,7 @@ all: ${LOGGER}
 	gcc merkle_tree.c ${INCLUDES} ${LIBS} ${LOGGER} -o ${EXEC}
 
 ./cakelog.o:cakelog/cakelog.c
-	gcc -c ./cakelog/cakelog.c -c -o ./cakelog.o
+	gcc -c ./cakelog/cakelog.c -c -o ./cakelog/cakelog.o
 
 clean:
 	rm -rf ./${EXEC} 
