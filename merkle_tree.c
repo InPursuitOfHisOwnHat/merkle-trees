@@ -25,7 +25,7 @@
 // with any program that uses it along with the -lm switch to include the Maths
 // library.
 
-#include "./cakelog/cakelog.h"
+#include "cakelog.h"
 
 // A tree is made up of Nodes and a Node can be implemented as a basic struct.
 // The struct is made up of recursive 'left' and 'right' references to itself
@@ -488,6 +488,9 @@ Node* build_merkle_tree(Node **previous_layer, long previous_layer_len) {
 
 int main(int argc, char *argv[]) {
 
+    // Borrow the Cakelogger timstamp function
+    char *timestamp_start = get_timestamp();
+    
     int opt;
 
     while ((opt = getopt(argc, argv, "df")) != -1) {
@@ -524,11 +527,21 @@ int main(int argc, char *argv[]) {
     printf("building tree ...\n");
     Node *root = build_merkle_tree(leaves, word_count);
 
-    // Finally
+    char *timestamp_stop = get_timestamp();
+
     printf("\n");
     printf("================================================================================\n");
     printf("Root digest is: %s\n", root->sha256_digest);
     printf("================================================================================\n");
+    printf("\n");
+
+    // How long did it take?
+
+    printf("start:\t%s\n", timestamp_start);
+    printf("finish:\t%s\n", timestamp_stop);
+
+    free(timestamp_start);
+    free(timestamp_stop);
 
     cakelog_stop();
 
